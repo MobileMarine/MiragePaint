@@ -28,26 +28,35 @@
         <div class="pane">
           <span class="label">Original</span>
           <div class="media">
-            @if (originalUrl(); as url) {
-              <img [src]="url" alt="Original" />
+            @if (originalPreviewUrl(); as url) {
+              <div
+                class="preview-stage"
+                [style.--sw]="stageW()"
+                [style.--sh]="stageH()"
+              >
+                <img [src]="url" alt="Original" />
+              </div>
             }
           </div>
         </div>
         <div class="pane">
           <span class="label">Vektor {{ busy() ? '…' : '' }}</span>
-          <div class="media">
+          <div class="media" [class.is-loading]="busy()">
             @if (previewHtml(); as html) {
               <div
-                class="preview-frame"
-                [style.aspect-ratio]="previewAspect()"
+                class="preview-stage"
+                [class.dimmed]="busy()"
+                [style.--sw]="stageW()"
+                [style.--sh]="stageH()"
                 [innerHTML]="html"
               ></div>
-            } @else if (busy()) {
-              <div class="placeholder">
-                {{ mode() === 'shapes' ? 'Erkenne Formen…' : 'Berechne Konturen…' }}
-              </div>
-            } @else {
+            } @else if (!busy()) {
               <div class="placeholder">Keine Vorschau</div>
+            }
+            @if (busy()) {
+              <div class="loading-overlay" aria-live="polite">
+                <span class="loading-text">Berechne Vorschau…</span>
+              </div>
             }
           </div>
         </div>

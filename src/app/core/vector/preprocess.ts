@@ -230,7 +230,7 @@ export function preprocessImageData(
     // Skip bg punch when the border is mostly transparent (no solid backdrop)
     if (!isBorderMostlyTransparent(data, width, height)) {
       bgRgb = findDominantColor(data, width, height);
-      punchBackground(data, bgRgb, 42);
+      punchBackground(data, bgRgb, 55);
     }
   }
   if (opts.removeAiTag) {

@@ -110,33 +110,66 @@ header h2 {
   overflow: hidden;
   display: grid;
   place-items: center;
-  /* Same atmosphere as editor canvas */
+  position: relative;
+  /* Enable container queries so both stages size identically */
+  container-type: size;
   background:
     radial-gradient(circle at 1px 1px, #c4bbb0 1px, transparent 0) 0 0 / 24px 24px,
     linear-gradient(135deg, #e8e2d8 0%, #d9d2c6 100%);
 }
 
-/* Same replaced-element sizing for bitmap and vector preview */
-.media > img,
-.media > .preview-frame {
+/*
+ * Shared stage for bitmap + SVG: same aspect ratio, fit inside .media
+ * like object-fit:contain (width and height constrained together).
+ */
+.preview-stage {
+  --sw: 1;
+  --sh: 1;
+  aspect-ratio: var(--sw) / var(--sh);
+  width: min(100cqw, calc(100cqh * var(--sw) / var(--sh)));
   max-width: 100%;
   max-height: 100%;
-  width: auto;
   height: auto;
-  object-fit: contain;
-  display: block;
-}
-
-.preview-frame {
-  min-width: 0;
-  min-height: 0;
+  position: relative;
   line-height: 0;
+  transition: opacity 160ms ease, filter 160ms ease;
 }
 
-.preview-frame :is(svg) {
+.preview-stage.dimmed {
+  opacity: 0.4;
+  filter: grayscale(0.2);
+}
+
+.preview-stage > img,
+.preview-stage :is(svg) {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: block;
+  object-fit: fill;
+}
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: rgba(232, 226, 216, 0.28);
+  z-index: 1;
+}
+
+.loading-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  background: rgba(255, 252, 246, 0.88);
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  box-shadow: 0 4px 14px rgba(30, 24, 18, 0.12);
 }
 
 .placeholder {

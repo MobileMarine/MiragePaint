@@ -7,6 +7,7 @@ import { preprocessImageData } from '../vector/preprocess';
 import { quantizeImageData } from '../vector/quantize';
 import {
   buildContainmentTree,
+  dropBackdropRegions,
   labelConnectedComponents,
   mergeSimilarColorRegions,
   mergeSmallRegions,
@@ -76,7 +77,7 @@ export class ShapeRecognizeService {
     source: ImageData,
     options: RecognizeOptions = DEFAULT_RECOGNIZE_OPTIONS,
   ): RecognizeResult {
-    const { data, width, height } = preprocessImageData(source, {
+    const { data, width, height, bgRgb } = preprocessImageData(source, {
       removeBackground: options.removeBackground,
       removeAiTag: options.removeAiTag,
     });
@@ -90,6 +91,10 @@ export class ShapeRecognizeService {
     mergeSmallRegions(map, options.minArea);
     if (options.morphIterations > 0) {
       morphCloseRegions(map, options.morphIterations);
+    }
+    // Drop large frame/backdrop regions so the motif sits on transparency
+    if (options.removeBackground) {
+      dropBackdropRegions(map, quantized.palette, bgRgb);
     }
     buildContainmentTree(map);
 

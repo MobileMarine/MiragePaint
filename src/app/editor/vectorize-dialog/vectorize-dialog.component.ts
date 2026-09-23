@@ -48,7 +48,8 @@ export class VectorizeDialogComponent {
   readonly open = signal(false);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
-  readonly originalUrl = signal<string | null>(null);
+  /** Processed bitmap (same pixels/size as vectorization input) for aligned preview. */
+  readonly originalPreviewUrl = signal<string | null>(null);
   readonly previewHtml = signal<SafeHtml | null>(null);
   readonly contourResult = signal<VectorizeResult | null>(null);
   readonly shapeResult = signal<RecognizeResult | null>(null);
@@ -56,13 +57,9 @@ export class VectorizeDialogComponent {
   readonly recognizeOptions = signal<RecognizeOptions>({ ...DEFAULT_RECOGNIZE_OPTIONS });
   readonly contoursOnly = signal(false);
   readonly mode = signal<VectorizeMode>('shapes');
-
-  /** CSS aspect-ratio for the vector preview frame (matches processed bitmap). */
-  previewAspect(): string | null {
-    const res = this.mode() === 'shapes' ? this.shapeResult() : this.contourResult();
-    if (!res?.width || !res?.height) return null;
-    return `${res.width} / ${res.height}`;
-  }
+  /** Shared stage size — identical for original + vector panes. */
+  readonly stageW = signal(1);
+  readonly stageH = signal(1);
 
   private sourceImage: ImageData | null = null;
   private readonly retrace$ = new Subject<void>();
@@ -120,11 +117,13 @@ export class VectorizeDialogComponent {
     this.open.set(true);
     this.busy.set(true);
     try {
-      // Use recognize loader (384) for shapes; for contours we still need higher res —
-      // load at 1024 via vectorize, both modes share the same source for simplicity.
       const loaded = await this.vectorize.loadToImageData(file);
+      // Drop file blob URL — we show the processed ImageData so size/position match the vector
+      URL.revokeObjectURL(loaded.objectUrl);
       this.sourceImage = loaded.imageData;
-      this.originalUrl.set(loaded.objectUrl);
+      this.stageW.set(loaded.imageData.width);
+      this.stageH.set(loaded.imageData.height);
+      this.originalPreviewUrl.set(imageDataToPngUrl(loaded.imageData));
       this.retrace$.next();
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Bild konnte nicht geladen werden.');
@@ -157,20 +156,9 @@ export class VectorizeDialogComponent {
     this.applied.emit(res);
   }
 
-  setMode(mode: VectorizeMode): void {
-    if (this.mode() === mode) return;
-    this.mode.set(mode);
-    this.error.set(null);
-    this.retrace$.next();
-  }
-
-  setContoursOnly(v: boolean): void {
-    this.contoursOnly.set(v);
-    this.refreshPreview();
-  }
-
   patchOptions(partial: Partial<VectorizeOptions>): void {
     this.options.update((o) => ({ ...o, ...partial }));
+    this.busy.set(true);
     this.retrace$.next();
   }
 
@@ -180,6 +168,7 @@ export class VectorizeDialogComponent {
 
   patchRecognize(partial: Partial<RecognizeOptions>): void {
     this.recognizeOptions.update((o) => ({ ...o, ...partial }));
+    this.busy.set(true);
     this.retrace$.next();
   }
 
@@ -188,6 +177,19 @@ export class VectorizeDialogComponent {
     value: RecognizeOptions[K],
   ): void {
     this.patchRecognize({ [key]: value } as Partial<RecognizeOptions>);
+  }
+
+  setMode(mode: VectorizeMode): void {
+    if (this.mode() === mode) return;
+    this.mode.set(mode);
+    this.error.set(null);
+    this.busy.set(true);
+    this.retrace$.next();
+  }
+
+  setContoursOnly(v: boolean): void {
+    this.contoursOnly.set(v);
+    this.refreshPreview();
   }
 
   canApply(): boolean {
@@ -221,8 +223,16 @@ export class VectorizeDialogComponent {
   }
 
   private cleanupUrl(): void {
-    const url = this.originalUrl();
-    if (url) URL.revokeObjectURL(url);
-    this.originalUrl.set(null);
+    this.originalPreviewUrl.set(null);
   }
+}
+
+function imageDataToPngUrl(imageData: ImageData): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = imageData.width;
+  canvas.height = imageData.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+  ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL('image/png');
 }

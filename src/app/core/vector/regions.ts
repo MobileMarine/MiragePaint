@@ -260,18 +260,21 @@ export function mergeSmallRegions(map: RegionMap, minArea: number): void {
   }
 }
 
-/** Morphological close (dilate then erode) with 3×3 structuring element, per region. */
+/** Morphological close that only fills interior holes — never background exterior. */
 export function morphCloseRegions(map: RegionMap, iterations = 1): void {
   if (iterations < 1) return;
   const { width, height, labels, regions } = map;
 
+  // Pixels reachable from the image border through empty (-1) cells = exterior
+  const exterior = markExteriorEmpty(labels, width, height);
+
   for (let iter = 0; iter < iterations; iter++) {
-    // Dilate: any empty neighbor of a region pixel becomes that region (prefer larger)
     const dilate = new Int32Array(labels);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const p = y * width + x;
         if (labels[p] >= 0) continue;
+        if (exterior[p]) continue; // do not grow into background
         let best = -1;
         let bestArea = -1;
         for (let dy = -1; dy <= 1; dy++) {
@@ -294,7 +297,6 @@ export function morphCloseRegions(map: RegionMap, iterations = 1): void {
       }
     }
 
-    // Erode: if a pixel's 3×3 neighborhood is not fully same label, clear it (but keep if interior)
     const erode = new Int32Array(dilate);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -316,12 +318,10 @@ export function morphCloseRegions(map: RegionMap, iterations = 1): void {
             }
           }
         }
-        // Only erode newly dilated border pixels that were originally empty
         if (!allSame && labels[p] < 0) erode[p] = -1;
       }
     }
 
-    // Rebuild region pixel lists from erode
     for (const r of regions.values()) {
       r.pixels = [];
       r.area = 0;
@@ -358,6 +358,90 @@ export function morphCloseRegions(map: RegionMap, iterations = 1): void {
       }
       r.cx = sx / r.area;
       r.cy = sy / r.area;
+    }
+  }
+}
+
+/** Flood-fill empty (-1) pixels connected to the image border. */
+function markExteriorEmpty(labels: Int32Array, width: number, height: number): Uint8Array {
+  const exterior = new Uint8Array(labels.length);
+  const stack: number[] = [];
+  const push = (p: number) => {
+    if (p < 0 || p >= labels.length) return;
+    if (labels[p] >= 0 || exterior[p]) return;
+    exterior[p] = 1;
+    stack.push(p);
+  };
+  for (let x = 0; x < width; x++) {
+    push(x);
+    push((height - 1) * width + x);
+  }
+  for (let y = 0; y < height; y++) {
+    push(y * width);
+    push(y * width + width - 1);
+  }
+  while (stack.length) {
+    const p = stack.pop()!;
+    const x = p % width;
+    const y = (p / width) | 0;
+    if (x > 0) push(p - 1);
+    if (x < width - 1) push(p + 1);
+    if (y > 0) push(p - width);
+    if (y < height - 1) push(p + width);
+  }
+  return exterior;
+}
+
+/**
+ * Remove backdrop regions: large shapes that hug the image border
+ * and/or match the punched background color.
+ */
+export function dropBackdropRegions(
+  map: RegionMap,
+  palette: [number, number, number][],
+  bgRgb: [number, number, number] | null,
+): void {
+  const { width, height, labels, regions } = map;
+  const imgArea = width * height;
+  const borderPixels: number[] = [];
+  for (let x = 0; x < width; x++) {
+    borderPixels.push(x);
+    borderPixels.push((height - 1) * width + x);
+  }
+  for (let y = 1; y < height - 1; y++) {
+    borderPixels.push(y * width);
+    borderPixels.push(y * width + width - 1);
+  }
+  const borderTotal = borderPixels.length;
+
+  for (const region of [...regions.values()]) {
+    let borderTouch = 0;
+    for (const p of borderPixels) {
+      if (labels[p] === region.id) borderTouch++;
+    }
+    const borderFrac = borderTouch / borderTotal;
+    const areaFrac = region.area / imgArea;
+    const bboxW = region.maxX - region.minX + 1;
+    const bboxH = region.maxY - region.minY + 1;
+    const bboxFrac = (bboxW * bboxH) / imgArea;
+
+    const rgb = palette[region.colorIndex];
+    const nearBg =
+      bgRgb && rgb
+        ? Math.hypot(rgb[0] - bgRgb[0], rgb[1] - bgRgb[1], rgb[2] - bgRgb[2]) < 48
+        : false;
+    const nearBlack = rgb ? rgb[0] < 28 && rgb[1] < 28 && rgb[2] < 28 : false;
+    const nearWhite = rgb ? rgb[0] > 230 && rgb[1] > 230 && rgb[2] > 230 : false;
+
+    // Backdrop heuristics: hugs the frame and is large, or matches bg/flat field color
+    const hugsFrame = borderFrac >= 0.22 && areaFrac >= 0.12;
+    const fullBleed = bboxFrac >= 0.55 && borderFrac >= 0.12 && areaFrac >= 0.18;
+    const flatField =
+      borderFrac >= 0.35 && (nearBg || nearBlack || nearWhite) && areaFrac >= 0.08;
+
+    if (hugsFrame || fullBleed || flatField || (nearBg && borderFrac >= 0.08 && areaFrac >= 0.1)) {
+      for (const p of region.pixels) labels[p] = -1;
+      regions.delete(region.id);
     }
   }
 }
