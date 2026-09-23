@@ -48,6 +48,8 @@ export interface FillGradient {
   from: string;
   to: string;
   presetId?: string;
+  /** Multi-stop colors for neon / random (and similar) fills */
+  stops?: string[];
 }
 
 export interface StyleProps {
@@ -190,7 +192,8 @@ export type FireworkVariant =
   | 'palm'
   | 'cluster'
   | 'ring'
-  | 'crossette';
+  | 'crossette'
+  | 'fountain';
 
 export type FireworkScheme =
   | 'neon'

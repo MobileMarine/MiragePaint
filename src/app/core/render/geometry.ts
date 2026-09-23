@@ -198,14 +198,30 @@ export function localToWorldPoint(
 /** Resolve palette mode for multi-primitive generators. */
 export function effectPaletteMode(style: StyleProps): PaletteMode {
   const fm = style.fillMode;
-  if (fm === 'rainbowGradient' || fm === 'rainbowStripes' || fm === 'gradient') return fm;
+  if (
+    fm === 'rainbowGradient' ||
+    fm === 'rainbowStripes' ||
+    fm === 'gradient' ||
+    fm === 'neon' ||
+    fm === 'random'
+  ) {
+    return fm;
+  }
   if (style.strokeMode === 'gradient') return 'gradient';
   return 'solid';
 }
 
-export function effectPaletteColors(style: StyleProps): { from: string; to: string } {
-  if (style.fillMode === 'gradient' && style.fillGradient) {
-    return { from: style.fillGradient.from, to: style.fillGradient.to };
+export function effectPaletteColors(style: StyleProps): {
+  from: string;
+  to: string;
+  stops?: string[];
+} {
+  if (style.fillGradient) {
+    return {
+      from: style.fillGradient.from,
+      to: style.fillGradient.to,
+      stops: style.fillGradient.stops,
+    };
   }
   return {
     from: style.stroke,
@@ -215,16 +231,23 @@ export function effectPaletteColors(style: StyleProps): { from: string; to: stri
 
 export function circlesUseFill(style: StyleProps): boolean {
   const fm = style.fillMode;
-  return fm === 'solid' || fm === 'gradient' || fm === 'rainbowGradient' || fm === 'rainbowStripes';
+  return (
+    fm === 'solid' ||
+    fm === 'gradient' ||
+    fm === 'rainbowGradient' ||
+    fm === 'rainbowStripes' ||
+    fm === 'neon' ||
+    fm === 'random'
+  );
 }
 
 /** Stroke color for line i of n (insertion order), matching MultiStar palette rules. */
 export function lineColorAt(style: StyleProps, i: number, n: number): string {
   const mode = effectPaletteMode(style);
-  const { from, to } = effectPaletteColors(style);
+  const { from, to, stops } = effectPaletteColors(style);
   const palFrom = mode === 'solid' ? style.stroke : from;
   const palTo = mode === 'solid' ? style.stroke : to;
-  return colorAt(i, Math.max(1, n), mode, palFrom, palTo);
+  return colorAt(i, Math.max(1, n), mode, palFrom, palTo, stops);
 }
 
 export function shapePrimitives(shape: Shape): GenPrimitive[] {
@@ -408,7 +431,12 @@ export function boundsForShape(shape: Shape): { x: number; y: number; w: number;
     }
     case 'firework': {
       const p = shape.params as FireworkParams;
-      const r = (p.radius || 1) * (1.15 + Math.abs(p.wind || 0) * 0.4);
+      const fountain = p.variant === 'fountain';
+      const r = (p.radius || 1) * (1.25 + Math.abs(p.wind || 0) * 0.45);
+      // Fountain sprays mostly upward (−y)
+      if (fountain) {
+        return { x: -r * 0.55, y: -r * 1.15, w: r * 1.1, h: r * 1.35 };
+      }
       return { x: -r, y: -r, w: r * 2, h: r * 2 };
     }
     case 'importedVector': {

@@ -55,3 +55,8 @@ export function schemeFromFillMode(fillMode: string): FireworkScheme {
   if (fillMode === 'random') return 'random';
   return 'gold';
 }
+
+/** Palette for shape fill modes neon / random (deterministic via seed). */
+export function pickFillStops(mode: 'neon' | 'random', seed: number): string[] {
+  return pickFireworkColors(mode, seed).colors;
+}

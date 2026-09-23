@@ -187,7 +187,17 @@ function shapeToSvgFragment(
   const opAttr = op < 1 ? ` opacity="${op}"` : '';
 
   let fill = shape.style.fill;
-  if (shape.style.fillGradient && !outlinesOnly) {
+  const fillMode = shape.style.fillMode;
+  if (
+    shape.style.fillGradient &&
+    !outlinesOnly &&
+    (fillMode === 'gradient' ||
+      fillMode === 'rainbowGradient' ||
+      fillMode === 'rainbowStripes' ||
+      fillMode === 'neon' ||
+      fillMode === 'random' ||
+      (!fillMode && shape.style.fillGradient))
+  ) {
     const id = `fg${idx}`;
     const g = shape.style.fillGradient;
     const rad = (g.angle * Math.PI) / 180;
@@ -195,11 +205,23 @@ function shapeToSvgFragment(
     const y1 = 50 - Math.sin(rad) * 50;
     const x2 = 50 + Math.cos(rad) * 50;
     const y2 = 50 + Math.sin(rad) * 50;
+    const stops =
+      g.stops && g.stops.length >= 2
+        ? g.stops
+        : [g.from, g.to];
+    const stopXml = stops
+      .map((c, i) => {
+        const off = stops.length <= 1 ? 0 : (i / (stops.length - 1)) * 100;
+        return `<stop offset="${off}%" stop-color="${escapeAttr(c)}"/>`;
+      })
+      .join('');
     defs.push(
-      `<linearGradient id="${id}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%"><stop offset="0%" stop-color="${escapeAttr(g.from)}"/><stop offset="100%" stop-color="${escapeAttr(g.to)}"/></linearGradient>`,
+      `<linearGradient id="${id}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">${stopXml}</linearGradient>`,
     );
     fill = `url(#${id})`;
   }
+  if (fillMode === 'none') fill = 'none';
+  if (fillMode === 'solid') fill = shape.style.fill;
 
   if (outlinesOnly) {
     const stroke =

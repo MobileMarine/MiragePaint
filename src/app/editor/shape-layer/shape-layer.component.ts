@@ -83,7 +83,8 @@ export class ShapeLayerComponent {
       mode === 'gradient' ||
       mode === 'rainbowGradient' ||
       mode === 'rainbowStripes' ||
-      this.shape.style.fillGradient
+      mode === 'neon' ||
+      mode === 'random'
     ) {
       return `url(#fill-${this.shape.id})`;
     }
@@ -103,7 +104,8 @@ export class ShapeLayerComponent {
       mode === 'gradient' ||
       mode === 'rainbowGradient' ||
       mode === 'rainbowStripes' ||
-      !!this.shape.style.fillGradient
+      mode === 'neon' ||
+      mode === 'random'
     );
   }
 
@@ -169,6 +171,20 @@ export class ShapeLayerComponent {
       return stops;
     }
     // soft rainbow gradient
+    return colors.map((color, i) => ({
+      offset: `${((i / Math.max(1, n - 1)) * 100).toFixed(2)}%`,
+      color,
+    }));
+  }
+
+  /** Multi-stop fill for neon / random modes. */
+  get paletteStops(): { offset: string; color: string }[] {
+    const g = this.shape.style.fillGradient;
+    const colors =
+      g?.stops && g.stops.length >= 2
+        ? g.stops
+        : [this.fillGradFrom, this.fillGradTo];
+    const n = colors.length;
     return colors.map((color, i) => ({
       offset: `${((i / Math.max(1, n - 1)) * 100).toFixed(2)}%`,
       color,

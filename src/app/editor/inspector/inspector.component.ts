@@ -18,7 +18,8 @@ import {
   StrokeMode,
   SunflowerParams,
 } from '../../core/models/shape';
-import { COLOR_PRESETS } from '../../core/style/presets';
+import { COLOR_PRESETS, RAINBOW_COLORS } from '../../core/style/presets';
+import { FIREWORK_NEON_POOL, pickFillStops } from '../../core/style/firework-palettes';
 
 const TYPE_LABELS: Record<string, string> = {
   freehand: 'Freihand',
@@ -58,6 +59,70 @@ export class InspectorComponent {
   readonly presets = COLOR_PRESETS;
 
   readonly selected = computed(() => this.drawing.selectedShape());
+
+  /**
+   * Neon/Random need a fill surface. Hide for stroke-only tools/shapes
+   * (line, freehand, centerLines, firework has its own scheme UI).
+   */
+  readonly supportsNeonRandomFill = computed(() => {
+    const s = this.selected();
+    const type = s?.type ?? this.drawing.tool();
+    const strokeOnly = new Set([
+      'line',
+      'freehand',
+      'centerLines',
+      'firework',
+      'vectorPath',
+    ]);
+    return !strokeOnly.has(type);
+  });
+
+  /** CSS background for the fill swatch (size of a color input). */
+  readonly fillPreviewCss = computed(() => {
+    const mode = this.drawing.fillMode();
+    const angle = this.drawing.fillAngle();
+    if (mode === 'none') {
+      return 'repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 0 0 / 8px 8px';
+    }
+    if (mode === 'solid') {
+      return this.drawing.fillColor();
+    }
+    const stopsToCss = (colors: readonly string[]) => {
+      if (!colors.length) return '#ccc';
+      if (colors.length === 1) return colors[0];
+      const parts = colors.map((c, i) => {
+        const pct = (i / (colors.length - 1)) * 100;
+        return `${c} ${pct.toFixed(1)}%`;
+      });
+      return `linear-gradient(${angle}deg, ${parts.join(', ')})`;
+    };
+    if (mode === 'gradient') {
+      return stopsToCss([
+        this.drawing.fillGradientFrom(),
+        this.drawing.fillGradientTo(),
+      ]);
+    }
+    if (mode === 'rainbowGradient') {
+      return stopsToCss(RAINBOW_COLORS);
+    }
+    if (mode === 'rainbowStripes') {
+      const n = RAINBOW_COLORS.length;
+      const parts: string[] = [];
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * 100;
+        const b = ((i + 1) / n) * 100;
+        parts.push(`${RAINBOW_COLORS[i]} ${a.toFixed(1)}%`, `${RAINBOW_COLORS[i]} ${b.toFixed(1)}%`);
+      }
+      return `linear-gradient(${angle}deg, ${parts.join(', ')})`;
+    }
+    if (mode === 'neon' || mode === 'random') {
+      const stops =
+        this.drawing.fillPaletteStops() ??
+        [this.drawing.fillGradientFrom(), this.drawing.fillGradientTo()];
+      return stopsToCss(stops.length >= 2 ? stops : FIREWORK_NEON_POOL[0]);
+    }
+    return this.drawing.fillColor();
+  });
 
   /** Top = front (reverse of shapes array). typeIndex = Einfüge-Nr. je Typ. */
   readonly layerEntries = computed(() => {
@@ -158,23 +223,52 @@ export class InspectorComponent {
         to: this.drawing.fillGradientTo(),
         presetId: this.drawing.fillPresetId() ?? undefined,
       };
-    } else if (
-      mode === 'rainbowGradient' ||
-      mode === 'rainbowStripes' ||
-      mode === 'neon' ||
-      mode === 'random'
-    ) {
+    } else if (mode === 'rainbowGradient' || mode === 'rainbowStripes') {
       patch.fillGradient = {
         angle: this.drawing.fillAngle(),
         from: this.drawing.fillGradientFrom(),
         to: this.drawing.fillGradientTo(),
       };
+    } else if (mode === 'neon' || mode === 'random') {
+      this.applyNeonRandomPalette(mode, patch);
     } else if (mode === 'none') {
       patch.fill = 'none';
+      patch.fillGradient = undefined;
+      this.drawing.fillPaletteStops.set(null);
     } else if (mode === 'solid') {
       patch.fill = this.drawing.fillColor();
+      patch.fillGradient = undefined;
+      this.drawing.fillPaletteStops.set(null);
     }
     if (this.selected()) this.drawing.updateSelectedStyle(patch);
+  }
+
+  rerollFillPalette(): void {
+    const mode = this.drawing.fillMode();
+    if (mode !== 'neon' && mode !== 'random') return;
+    const patch: Partial<import('../../core/models/shape').StyleProps> = { fillMode: mode };
+    this.applyNeonRandomPalette(mode, patch);
+    if (this.selected()) this.drawing.updateSelectedStyle(patch);
+  }
+
+  private applyNeonRandomPalette(
+    mode: 'neon' | 'random',
+    patch: Partial<import('../../core/models/shape').StyleProps>,
+  ): void {
+    const seed = (Math.random() * 0xffffffff) >>> 0;
+    const stops = pickFillStops(mode, seed);
+    const from = stops[0];
+    const to = stops[stops.length - 1];
+    this.drawing.fillGradientFrom.set(from);
+    this.drawing.fillGradientTo.set(to);
+    this.drawing.fillPaletteStops.set(stops);
+    patch.fill = from;
+    patch.fillGradient = {
+      angle: this.drawing.fillAngle(),
+      from,
+      to,
+      stops,
+    };
   }
 
   onFillPreset(id: string): void {
@@ -196,6 +290,7 @@ export class InspectorComponent {
           from: this.drawing.fillGradientFrom(),
           to: this.drawing.fillGradientTo(),
           presetId: this.drawing.fillPresetId() ?? undefined,
+          stops: this.drawing.fillPaletteStops() ?? undefined,
         },
       });
     }

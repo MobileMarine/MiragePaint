@@ -96,20 +96,31 @@
       <span class="chevron material-symbols-outlined">{{ isCollapsed('fill') ? 'expand_more' : 'expand_less' }}</span>
     </button>
     @if (!isCollapsed('fill')) {
-      <label class="row">
+      <label class="row mode-row">
         <span>Modus</span>
-        <select
-          [ngModel]="drawing.fillMode()"
-          (ngModelChange)="onFillMode($event)"
-        >
-          <option value="none">Keine</option>
-          <option value="solid">Farbe</option>
-          <option value="gradient">Verlauf</option>
-          <option value="rainbowGradient">Regenbogen-Übergang</option>
-          <option value="rainbowStripes">Regenbogen-Streifen</option>
-          <option value="neon">Neon</option>
-          <option value="random">Random</option>
-        </select>
+        <div class="mode-with-swatch">
+          <select
+            [ngModel]="drawing.fillMode()"
+            (ngModelChange)="onFillMode($event)"
+          >
+            <option value="none">Keine</option>
+            <option value="solid">Farbe</option>
+            <option value="gradient">Verlauf</option>
+            <option value="rainbowGradient">Regenbogen-Übergang</option>
+            <option value="rainbowStripes">Regenbogen-Streifen</option>
+            @if (supportsNeonRandomFill()) {
+              <option value="neon">Neon</option>
+              <option value="random">Random</option>
+            }
+          </select>
+          <span
+            class="fill-swatch"
+            [class.is-none]="drawing.fillMode() === 'none'"
+            [style.background]="fillPreviewCss()"
+            [attr.title]="drawing.fillMode()"
+            aria-hidden="true"
+          ></span>
+        </div>
       </label>
       @if (drawing.fillMode() === 'solid') {
         <label class="row">
@@ -154,7 +165,9 @@
       @if (
         drawing.fillMode() === 'gradient' ||
         drawing.fillMode() === 'rainbowGradient' ||
-        drawing.fillMode() === 'rainbowStripes'
+        drawing.fillMode() === 'rainbowStripes' ||
+        drawing.fillMode() === 'neon' ||
+        drawing.fillMode() === 'random'
       ) {
         <label class="row">
           <span>Winkel</span>
@@ -167,6 +180,11 @@
           />
           <em>{{ drawing.fillAngle() }}°</em>
         </label>
+      }
+      @if (drawing.fillMode() === 'neon' || drawing.fillMode() === 'random') {
+        <button type="button" class="ghost" (click)="rerollFillPalette()">
+          Neu würfeln
+        </button>
       }
     }
   </section>
@@ -452,6 +470,7 @@
               <option value="chrysanthemum">Chrysantheme</option>
               <option value="willow">Weide</option>
               <option value="palm">Palme</option>
+              <option value="fountain">Fontäne</option>
               <option value="cluster">Cluster</option>
               <option value="ring">Ring</option>
               <option value="crossette">Crossette</option>

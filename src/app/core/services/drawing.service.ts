@@ -45,7 +45,7 @@ import { HistoryService } from './history.service';
 import { UiPrefsService } from './ui-prefs.service';
 import { worldBoundsForShape } from '../render/geometry';
 import { COLOR_PRESETS, presetById } from '../style/presets';
-import { schemeFromFillMode } from '../style/firework-palettes';
+import { schemeFromFillMode, pickFillStops } from '../style/firework-palettes';
 
 const DEFAULT_META: DocumentMeta = {
   background: '',
@@ -90,6 +90,8 @@ export class DrawingService {
   readonly strokeAngle = signal(0);
   readonly fillGradientFrom = signal('#c45c26');
   readonly fillGradientTo = signal('#f7c948');
+  /** Cached multi-stop palette for neon / random (stable across drag redraws). */
+  readonly fillPaletteStops = signal<string[] | null>(null);
   readonly collapsedSections = signal<Record<string, boolean>>({});
   readonly draft = signal<Shape | null>(null);
 
@@ -324,6 +326,9 @@ export class DrawingService {
         this.fillGradientFrom.set(st.fillGradient.from);
         this.fillGradientTo.set(st.fillGradient.to);
         this.fillPresetId.set(st.fillGradient.presetId ?? null);
+        this.fillPaletteStops.set(st.fillGradient.stops ?? null);
+      } else {
+        this.fillPaletteStops.set(null);
       }
     }
   }
@@ -482,7 +487,15 @@ export class DrawingService {
     const ids = new Set(this.selectedIds());
     if (!ids.size) return;
     this.shapes.update((list) =>
-      list.map((s) => (ids.has(s.id) ? { ...s, style: { ...s.style, ...partial } } : s)),
+      list.map((s) => {
+        if (!ids.has(s.id)) return s;
+        const style = { ...s.style, ...partial };
+        // Explicitly drop gradient data when switching to solid/none
+        if (partial.fillMode === 'solid' || partial.fillMode === 'none') {
+          delete style.fillGradient;
+        }
+        return { ...s, style };
+      }),
     );
     this.pushSnapshot();
   }
@@ -802,16 +815,27 @@ export class DrawingService {
         to: this.fillGradientTo(),
         presetId: this.fillPresetId() ?? undefined,
       };
-    } else if (
-      fillMode === 'rainbowGradient' ||
-      fillMode === 'rainbowStripes' ||
-      fillMode === 'neon' ||
-      fillMode === 'random'
-    ) {
+    } else if (fillMode === 'rainbowGradient' || fillMode === 'rainbowStripes') {
       style.fillGradient = {
         angle: this.fillAngle(),
         from: this.fillGradientFrom(),
         to: this.fillGradientTo(),
+      };
+    } else if (fillMode === 'neon' || fillMode === 'random') {
+      let stops = this.fillPaletteStops();
+      if (!stops?.length) {
+        const seed = (Math.random() * 0xffffffff) >>> 0;
+        stops = pickFillStops(fillMode, seed);
+        this.fillPaletteStops.set(stops);
+        this.fillGradientFrom.set(stops[0]);
+        this.fillGradientTo.set(stops[stops.length - 1]);
+      }
+      style.fill = stops[0];
+      style.fillGradient = {
+        angle: this.fillAngle(),
+        from: stops[0],
+        to: stops[stops.length - 1],
+        stops,
       };
     }
     return style;

@@ -14,6 +14,10 @@
             @for (s of rainbowStops; track $index) {
               <svg:stop [attr.offset]="s.offset" [attr.stop-color]="s.color" />
             }
+          } @else if (shape.style.fillMode === 'neon' || shape.style.fillMode === 'random') {
+            @for (s of paletteStops; track $index) {
+              <svg:stop [attr.offset]="s.offset" [attr.stop-color]="s.color" />
+            }
           } @else {
             <svg:stop offset="0%" [attr.stop-color]="fillGradFrom" />
             <svg:stop offset="100%" [attr.stop-color]="fillGradTo" />
@@ -188,6 +192,7 @@
               [attr.stroke-width]="st.width"
               [attr.opacity]="st.opacity"
               stroke-linecap="round"
+              stroke-linejoin="round"
             />
           }
           @for (sp of fw.sparks; track $index) {

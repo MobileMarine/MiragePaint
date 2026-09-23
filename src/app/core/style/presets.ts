@@ -1,4 +1,5 @@
 import { lerpColor } from '../math/polar';
+import { FIREWORK_NEON_POOL } from './firework-palettes';
 
 export interface ColorPreset {
   id: string;
@@ -25,7 +26,13 @@ export const RAINBOW_COLORS = [
   '#732982',
 ] as const;
 
-export type PaletteMode = 'solid' | 'gradient' | 'rainbowGradient' | 'rainbowStripes';
+export type PaletteMode =
+  | 'solid'
+  | 'gradient'
+  | 'rainbowGradient'
+  | 'rainbowStripes'
+  | 'neon'
+  | 'random';
 
 /** Farbe für Primitive i von n je nach Modus. */
 export function colorAt(
@@ -34,6 +41,7 @@ export function colorAt(
   mode: PaletteMode,
   from: string,
   to: string,
+  stops?: readonly string[],
 ): string {
   const t = n <= 1 ? 0 : Math.min(1, Math.max(0, i / (n - 1)));
   switch (mode) {
@@ -52,6 +60,22 @@ export function colorAt(
       const i0 = Math.floor(f);
       const i1 = Math.min(len - 1, i0 + 1);
       return lerpColor(RAINBOW_COLORS[i0], RAINBOW_COLORS[i1], f - i0);
+    }
+    case 'neon':
+    case 'random': {
+      const palette =
+        stops && stops.length >= 2
+          ? stops
+          : from && to
+            ? [from, to]
+            : [...FIREWORK_NEON_POOL[0]];
+      if (!palette.length) return from;
+      if (palette.length === 1) return palette[0];
+      // Soft blend across palette stops
+      const f = t * (palette.length - 1);
+      const i0 = Math.floor(f);
+      const i1 = Math.min(palette.length - 1, i0 + 1);
+      return lerpColor(palette[i0], palette[i1], f - i0);
     }
     default:
       return from;
