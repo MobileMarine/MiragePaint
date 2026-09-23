@@ -6,6 +6,9 @@ import {
   DrawingDocument,
   EllipseParams,
   FillMode,
+  FireworkParams,
+  FireworkScheme,
+  FireworkVariant,
   FreehandParams,
   GradientCircleParams,
   GradientParams,
@@ -42,6 +45,7 @@ import { HistoryService } from './history.service';
 import { UiPrefsService } from './ui-prefs.service';
 import { worldBoundsForShape } from '../render/geometry';
 import { COLOR_PRESETS, presetById } from '../style/presets';
+import { schemeFromFillMode } from '../style/firework-palettes';
 
 const DEFAULT_META: DocumentMeta = {
   background: '',
@@ -55,6 +59,13 @@ const EFFECT_DEFAULTS = {
   circleLine: { arms: 72, radius: 250 },
   circles: { mode: 2 as const, count: 20, sizeMultiply: 1.15, offset: 0.05, width: 40, height: 40 },
   sunflower: { petals: 18, seedRings: 4 },
+  firework: {
+    variant: 'chrysanthemum' as FireworkVariant,
+    bursts: 1,
+    smoke: 0.55,
+    glow: 0.75,
+    scheme: 'neon' as FireworkScheme,
+  },
   rainbow: { mode: 'gradient' as const },
 };
 
@@ -112,6 +123,10 @@ export class DrawingService {
 
   readonly canUndo = computed(() => this.history.canUndo());
   readonly canRedo = computed(() => this.history.canRedo());
+
+  private fireworkRaf = 0;
+  private fireworkAnimStart = 0;
+  private fireworkAwaitCommit = false;
 
   constructor(
     private readonly history: HistoryService,
@@ -220,6 +235,8 @@ export class DrawingService {
   }
 
   clearDocument(): void {
+    this.stopFireworkAnim();
+    this.fireworkAwaitCommit = false;
     this.shapes.set([]);
     this.selectedIds.set([]);
     this.draft.set(null);
@@ -556,6 +573,35 @@ export class DrawingService {
       return;
     }
 
+    if (tool === 'firework') {
+      this.stopFireworkAnim();
+      const ep = this.effectParams().firework;
+      const scheme =
+        this.fillMode() === 'neon' || this.fillMode() === 'random'
+          ? schemeFromFillMode(this.fillMode())
+          : ep.scheme;
+      this.draft.set({
+        id,
+        type: 'firework',
+        style,
+        transform: createTransform(point.x, point.y),
+        params: {
+          seed: (Math.random() * 0xffffffff) >>> 0,
+          radius: 40,
+          wind: 0,
+          variant: ep.variant,
+          scheme,
+          bursts: ep.bursts,
+          smoke: ep.smoke,
+          glow: ep.glow,
+          animT: 0,
+        } satisfies FireworkParams,
+      });
+      this.fireworkAwaitCommit = false;
+      this.startFireworkAnim();
+      return;
+    }
+
     // Drag-based tools: store start in draft transform origin / params
     this.draft.set(this.createDragDraft(tool, id, point, style));
   }
@@ -585,12 +631,38 @@ export class DrawingService {
       return;
     }
 
+    if (d.type === 'firework') {
+      const p = d.params as FireworkParams;
+      const dist = Math.hypot(point.x - start.x, point.y - start.y);
+      const wind = Math.max(-1, Math.min(1, (point.x - start.x) / Math.max(50, dist))) * 0.7;
+      this.draft.set({
+        ...d,
+        params: {
+          ...p,
+          radius: Math.max(24, dist),
+          wind,
+        },
+      });
+      return;
+    }
+
     this.draft.set(this.updateDragDraft(d, start, point));
   }
 
   endStroke(point: Point2D, start: Point2D): void {
     const d = this.draft();
     if (!d) return;
+
+    if (d.type === 'firework') {
+      this.continueStroke(point, start);
+      const cur = this.draft();
+      const p = cur?.type === 'firework' ? (cur.params as FireworkParams) : null;
+      this.fireworkAwaitCommit = true;
+      if (p && (p.animT ?? 0) >= 1) {
+        this.commitFireworkDraft();
+      }
+      return;
+    }
 
     let finalShape = d;
 
@@ -620,6 +692,62 @@ export class DrawingService {
     this.pushSnapshot();
   }
 
+  private startFireworkAnim(): void {
+    this.stopFireworkAnim();
+    this.fireworkAnimStart = performance.now();
+    const duration = 1100;
+    const tick = (now: number) => {
+      const d = this.draft();
+      if (!d || d.type !== 'firework') {
+        this.fireworkRaf = 0;
+        return;
+      }
+      const t = Math.min(1, (now - this.fireworkAnimStart) / duration);
+      const p = d.params as FireworkParams;
+      this.draft.set({ ...d, params: { ...p, animT: t } });
+      if (t >= 1) {
+        this.fireworkRaf = 0;
+        if (this.fireworkAwaitCommit) this.commitFireworkDraft();
+        return;
+      }
+      this.fireworkRaf = requestAnimationFrame(tick);
+    };
+    this.fireworkRaf = requestAnimationFrame(tick);
+  }
+
+  private stopFireworkAnim(): void {
+    if (this.fireworkRaf) {
+      cancelAnimationFrame(this.fireworkRaf);
+      this.fireworkRaf = 0;
+    }
+  }
+
+  private commitFireworkDraft(): void {
+    const d = this.draft();
+    if (!d || d.type !== 'firework') {
+      this.fireworkAwaitCommit = false;
+      return;
+    }
+    const p = d.params as FireworkParams;
+    if (p.radius < 16) {
+      this.draft.set(null);
+      this.fireworkAwaitCommit = false;
+      this.stopFireworkAnim();
+      return;
+    }
+    const { animT: _a, ...rest } = p;
+    const final: Shape = {
+      ...d,
+      params: { ...rest, animT: undefined } satisfies FireworkParams,
+    };
+    this.stopFireworkAnim();
+    this.shapes.update((list) => [...list, final]);
+    this.draft.set(null);
+    this.selectedIds.set([final.id]);
+    this.fireworkAwaitCommit = false;
+    this.pushSnapshot();
+  }
+
   undo(): void {
     const prev = this.history.undo();
     if (prev) this.restoreSnapshot(prev);
@@ -639,6 +767,8 @@ export class DrawingService {
   }
 
   loadDocument(doc: DrawingDocument): void {
+    this.stopFireworkAnim();
+    this.fireworkAwaitCommit = false;
     this.meta.set({ ...DEFAULT_META, ...doc.meta });
     this.shapes.set(
       (doc.shapes ?? []).map((s) => ({
@@ -672,7 +802,12 @@ export class DrawingService {
         to: this.fillGradientTo(),
         presetId: this.fillPresetId() ?? undefined,
       };
-    } else if (fillMode === 'rainbowGradient' || fillMode === 'rainbowStripes') {
+    } else if (
+      fillMode === 'rainbowGradient' ||
+      fillMode === 'rainbowStripes' ||
+      fillMode === 'neon' ||
+      fillMode === 'random'
+    ) {
       style.fillGradient = {
         angle: this.fillAngle(),
         from: this.fillGradientFrom(),

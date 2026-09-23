@@ -145,6 +145,64 @@
         }
       }
     }
+    @case ('firework') {
+      @if (fireworkFrame; as fw) {
+        <svg:defs>
+          <svg:filter
+            [attr.id]="'fw-glow-' + shape.id"
+            x="-50%"
+            y="-50%"
+            width="200%"
+            height="200%"
+          >
+            <svg:feGaussianBlur
+              in="SourceGraphic"
+              [attr.stdDeviation]="fireworkGlowStd"
+              result="blur"
+            />
+            <svg:feMerge>
+              <svg:feMergeNode in="blur" />
+              <svg:feMergeNode in="SourceGraphic" />
+            </svg:feMerge>
+          </svg:filter>
+        </svg:defs>
+        @for (s of fw.smoke; track $index) {
+          <svg:ellipse
+            [attr.cx]="s.x"
+            [attr.cy]="s.y"
+            [attr.rx]="s.rx"
+            [attr.ry]="s.ry"
+            fill="#9aa3ad"
+            [attr.opacity]="s.opacity"
+            stroke="none"
+          />
+        }
+        <svg:g [attr.filter]="'url(#fw-glow-' + shape.id + ')'">
+          @for (st of fw.streaks; track $index) {
+            <svg:line
+              [attr.x1]="st.x1"
+              [attr.y1]="st.y1"
+              [attr.x2]="st.x2"
+              [attr.y2]="st.y2"
+              [attr.stroke]="st.color"
+              [attr.stroke-width]="st.width"
+              [attr.opacity]="st.opacity"
+              stroke-linecap="round"
+            />
+          }
+          @for (sp of fw.sparks; track $index) {
+            <svg:circle
+              [attr.cx]="sp.x"
+              [attr.cy]="sp.y"
+              [attr.r]="sp.r"
+              [attr.fill]="sp.color"
+              [attr.opacity]="sp.opacity"
+              stroke="none"
+            />
+          }
+        </svg:g>
+      }
+    }
     @case ('rainbow') {
       @for (band of rainbowBands; track $index) {
         <svg:path

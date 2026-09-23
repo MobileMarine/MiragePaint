@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
 import {
   CenterLinesParams,
+  FireworkParams,
   FreehandParams,
   GroupParams,
   HeartParams,
@@ -26,6 +27,7 @@ import {
   transformAttr,
   trianglePoints,
 } from '../../core/render/geometry';
+import { evaluateFirework } from '../../core/generators/firework';
 import { RAINBOW_COLORS } from '../../core/style/presets';
 
 @Component({
@@ -201,6 +203,19 @@ export class ShapeLayerComponent {
       palTo,
       mode,
     );
+  }
+
+  get fireworkFrame() {
+    if (this.shape.type !== 'firework') return null;
+    const p = this.shape.params as FireworkParams;
+    const t = p.animT ?? 1;
+    return evaluateFirework(p, t);
+  }
+
+  get fireworkGlowStd(): number {
+    if (this.shape.type !== 'firework') return 0;
+    const g = (this.shape.params as FireworkParams).glow ?? 0.7;
+    return 1.5 + g * 4;
   }
 
   get bounds() {

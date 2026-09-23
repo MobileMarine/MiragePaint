@@ -107,6 +107,8 @@
           <option value="gradient">Verlauf</option>
           <option value="rainbowGradient">Regenbogen-Übergang</option>
           <option value="rainbowStripes">Regenbogen-Streifen</option>
+          <option value="neon">Neon</option>
+          <option value="random">Random</option>
         </select>
       </label>
       @if (drawing.fillMode() === 'solid') {
@@ -428,6 +430,94 @@
               [ngModel]="asSunflower(s.params).seedRings"
               (ngModelChange)="updateParam('seedRings', $event)"
             />
+          </label>
+        }
+      </section>
+    }
+
+    @if (s.type === 'firework') {
+      <section class="block fade-in" [class.collapsed]="isCollapsed('firework')">
+        <button type="button" class="block-toggle" (click)="toggle('firework')">
+          <h3>Feuerwerk</h3>
+          <span class="chevron material-symbols-outlined">{{ isCollapsed('firework') ? 'expand_more' : 'expand_less' }}</span>
+        </button>
+        @if (!isCollapsed('firework')) {
+          <label class="row">
+            <span>Variante</span>
+            <select
+              [ngModel]="asFirework(s.params).variant"
+              (ngModelChange)="onFireworkVariant($event)"
+            >
+              <option value="peony">Pfingstrose</option>
+              <option value="chrysanthemum">Chrysantheme</option>
+              <option value="willow">Weide</option>
+              <option value="palm">Palme</option>
+              <option value="cluster">Cluster</option>
+              <option value="ring">Ring</option>
+              <option value="crossette">Crossette</option>
+            </select>
+          </label>
+          <label class="row">
+            <span>Farbschema</span>
+            <select
+              [ngModel]="asFirework(s.params).scheme"
+              (ngModelChange)="onFireworkScheme($event)"
+            >
+              <option value="neon">Neon</option>
+              <option value="random">Random</option>
+              <option value="gold">Gold</option>
+              <option value="bluePink">Blau / Pink</option>
+              <option value="yellowRed">Gelb / Rot</option>
+              <option value="purpleGreen">Violett / Grün</option>
+              <option value="whiteGold">Weiß / Gold</option>
+              <option value="aquaMagenta">Aqua / Magenta</option>
+            </select>
+          </label>
+          <label class="row">
+            <span>Bursts</span>
+            <input
+              type="number"
+              min="1"
+              max="3"
+              [ngModel]="asFirework(s.params).bursts"
+              (ngModelChange)="updateParam('bursts', $event)"
+            />
+          </label>
+          <label class="row">
+            <span>Wind</span>
+            <input
+              type="range"
+              min="-1"
+              max="1"
+              step="0.05"
+              [ngModel]="asFirework(s.params).wind"
+              (ngModelChange)="updateParam('wind', $event)"
+            />
+            <em>{{ asFirework(s.params).wind | number: '1.0-2' }}</em>
+          </label>
+          <label class="row">
+            <span>Glow</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              [ngModel]="asFirework(s.params).glow"
+              (ngModelChange)="updateParam('glow', $event)"
+            />
+            <em>{{ (asFirework(s.params).glow * 100 | number: '1.0-0') }}%</em>
+          </label>
+          <label class="row">
+            <span>Rauch</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              [ngModel]="asFirework(s.params).smoke"
+              (ngModelChange)="updateParam('smoke', $event)"
+            />
+            <em>{{ (asFirework(s.params).smoke * 100 | number: '1.0-0') }}%</em>
           </label>
         }
       </section>

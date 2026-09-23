@@ -17,6 +17,7 @@ export type ToolId =
   | 'circleLine'
   | 'circles'
   | 'sunflower'
+  | 'firework'
   | 'rainbow';
 
 export interface Point2D {
@@ -32,7 +33,14 @@ export interface Transform2D {
   scaleY: number;
 }
 
-export type FillMode = 'none' | 'solid' | 'gradient' | 'rainbowGradient' | 'rainbowStripes';
+export type FillMode =
+  | 'none'
+  | 'solid'
+  | 'gradient'
+  | 'rainbowGradient'
+  | 'rainbowStripes'
+  | 'neon'
+  | 'random';
 export type StrokeMode = 'none' | 'solid' | 'gradient';
 
 export interface FillGradient {
@@ -175,6 +183,38 @@ export interface SunflowerParams {
   startAngle: number;
 }
 
+export type FireworkVariant =
+  | 'peony'
+  | 'chrysanthemum'
+  | 'willow'
+  | 'palm'
+  | 'cluster'
+  | 'ring'
+  | 'crossette';
+
+export type FireworkScheme =
+  | 'neon'
+  | 'random'
+  | 'gold'
+  | 'bluePink'
+  | 'yellowRed'
+  | 'purpleGreen'
+  | 'whiteGold'
+  | 'aquaMagenta';
+
+export interface FireworkParams {
+  seed: number;
+  radius: number;
+  wind: number;
+  variant: FireworkVariant;
+  scheme: FireworkScheme;
+  bursts: number;
+  smoke: number;
+  glow: number;
+  /** Transient 0..1 while animating draft; treated as 1 when omitted. */
+  animT?: number;
+}
+
 /** Classic rainbow along a semicircle from (x1,y1) to (x2,y2). */
 export type RainbowMode = 'gradient' | 'stripes';
 
@@ -237,6 +277,7 @@ export type ShapeParams =
   | CircleLineParams
   | CirclesParams
   | SunflowerParams
+  | FireworkParams
   | RainbowParams
   | ImportedVectorParams
   | VectorPathParams

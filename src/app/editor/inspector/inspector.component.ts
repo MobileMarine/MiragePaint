@@ -6,6 +6,9 @@ import {
   CirclesParams,
   CircleLineParams,
   FillMode,
+  FireworkParams,
+  FireworkScheme,
+  FireworkVariant,
   MultiStarParams,
   OctopusParams,
   RainbowMode,
@@ -36,6 +39,7 @@ const TYPE_LABELS: Record<string, string> = {
   circleLine: 'CircleLine',
   circles: 'Circles',
   sunflower: 'Sonnenblume',
+  firework: 'Feuerwerk',
   rainbow: 'Regenbogen',
   importedVector: 'Import',
   vectorPath: 'Pfad',
@@ -154,7 +158,12 @@ export class InspectorComponent {
         to: this.drawing.fillGradientTo(),
         presetId: this.drawing.fillPresetId() ?? undefined,
       };
-    } else if (mode === 'rainbowGradient' || mode === 'rainbowStripes') {
+    } else if (
+      mode === 'rainbowGradient' ||
+      mode === 'rainbowStripes' ||
+      mode === 'neon' ||
+      mode === 'random'
+    ) {
       patch.fillGradient = {
         angle: this.drawing.fillAngle(),
         from: this.drawing.fillGradientFrom(),
@@ -240,12 +249,21 @@ export class InspectorComponent {
   }
 
   updateEffectDefault(
-    group: 'octopus' | 'multiStar' | 'randomStar' | 'circleLine' | 'circles' | 'sunflower' | 'rainbow',
+    group:
+      | 'octopus'
+      | 'multiStar'
+      | 'randomStar'
+      | 'circleLine'
+      | 'circles'
+      | 'sunflower'
+      | 'firework'
+      | 'rainbow',
     key: string,
     value: string | number,
   ): void {
     const coerced =
-      group === 'rainbow' && key === 'mode'
+      (group === 'rainbow' && key === 'mode') ||
+      (group === 'firework' && (key === 'variant' || key === 'scheme'))
         ? value
         : typeof value === 'number'
           ? value
@@ -282,7 +300,26 @@ export class InspectorComponent {
   asSunflower(p: unknown): SunflowerParams {
     return p as SunflowerParams;
   }
+  asFirework(p: unknown): FireworkParams {
+    return p as FireworkParams;
+  }
   asRainbow(p: unknown): RainbowParams {
     return p as RainbowParams;
+  }
+
+  onFireworkVariant(v: FireworkVariant): void {
+    this.drawing.updateSelectedParams({ variant: v });
+    this.drawing.effectParams.update((ep) => ({
+      ...ep,
+      firework: { ...ep.firework, variant: v },
+    }));
+  }
+
+  onFireworkScheme(v: FireworkScheme): void {
+    this.drawing.updateSelectedParams({ scheme: v });
+    this.drawing.effectParams.update((ep) => ({
+      ...ep,
+      firework: { ...ep.firework, scheme: v },
+    }));
   }
 }

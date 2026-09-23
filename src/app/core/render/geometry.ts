@@ -19,6 +19,7 @@ import {
   Shape,
   StyleProps,
   SunflowerParams,
+  FireworkParams,
   TriangleParams,
   VectorPathParams,
   GroupParams,
@@ -374,6 +375,11 @@ export function boundsForShape(shape: Shape): { x: number; y: number; w: number;
     case 'sunflower': {
       const p = shape.params as SunflowerParams;
       const r = p.radius || 1;
+      return { x: -r, y: -r, w: r * 2, h: r * 2 };
+    }
+    case 'firework': {
+      const p = shape.params as FireworkParams;
+      const r = (p.radius || 1) * (1.15 + Math.abs(p.wind || 0) * 0.4);
       return { x: -r, y: -r, w: r * 2, h: r * 2 };
     }
     case 'importedVector': {
