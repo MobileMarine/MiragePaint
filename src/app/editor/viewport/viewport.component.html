@@ -25,8 +25,8 @@
     />
     <svg:defs>
       <svg:linearGradient id="paperGrad" x1="0" y1="0" x2="1" y2="1">
-        <svg:stop offset="0%" stop-color="#e8e2d8" />
-        <svg:stop offset="100%" stop-color="#d9d2c6" />
+        <svg:stop offset="0%" stop-color="var(--canvas-0)" />
+        <svg:stop offset="100%" stop-color="var(--canvas-1)" />
       </svg:linearGradient>
       <svg:pattern
         id="dotGrid"
@@ -35,7 +35,7 @@
         patternUnits="userSpaceOnUse"
         [attr.patternTransform]="'translate(' + drawing.pan().x + ' ' + drawing.pan().y + ') scale(' + drawing.zoom() + ')'"
       >
-        <svg:circle cx="1" cy="1" r="1" fill="#c4bbb0" />
+        <svg:circle cx="1" cy="1" r="1" fill="var(--grid-dot)" />
       </svg:pattern>
     </svg:defs>
     <svg:rect

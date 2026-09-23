@@ -20,6 +20,7 @@ export interface UiPrefs {
   fillGradientTo: string;
   effectParams?: unknown;
   collapsedSections: Record<string, boolean>;
+  darkMode: boolean;
 }
 
 const STORAGE_KEY = 'mirage-paint-ui';

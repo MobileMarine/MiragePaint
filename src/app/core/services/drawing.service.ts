@@ -92,6 +92,7 @@ export class DrawingService {
   readonly fillGradientTo = signal('#f7c948');
   /** Cached multi-stop palette for neon / random (stable across drag redraws). */
   readonly fillPaletteStops = signal<string[] | null>(null);
+  readonly darkMode = signal(false);
   readonly collapsedSections = signal<Record<string, boolean>>({});
   readonly draft = signal<Shape | null>(null);
 
@@ -158,7 +159,12 @@ export class DrawingService {
         fillGradientTo: this.fillGradientTo(),
         effectParams: this.effectParams(),
         collapsedSections: this.collapsedSections(),
+        darkMode: this.darkMode(),
       });
+    });
+
+    effect(() => {
+      document.documentElement.classList.toggle('dark', this.darkMode());
     });
   }
 
@@ -192,6 +198,11 @@ export class DrawingService {
         ...p.collapsedSections,
       });
     }
+    if (typeof p.darkMode === 'boolean') this.darkMode.set(p.darkMode);
+  }
+
+  toggleDarkMode(): void {
+    this.darkMode.update((v) => !v);
   }
 
   toggleSection(id: string): void {

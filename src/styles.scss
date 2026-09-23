@@ -11,6 +11,31 @@
   --ink-muted: #6d645a;
   --accent: #2a6f7a;
   --accent-soft: rgba(42, 111, 122, 0.14);
+  --input-bg: #ffffff;
+  --scroll-thumb: #c4bbb0;
+  --canvas-0: #e8e2d8;
+  --canvas-1: #d9d2c6;
+  --grid-dot: #c4bbb0;
+  --layer-active: color-mix(in srgb, var(--accent) 12%, #fff);
+}
+
+html.dark {
+  --bg: #121416;
+  --panel: #1a1d21;
+  --panel-soft: #22262b;
+  --panel-hover: #2a2f36;
+  --line: #3a4048;
+  --ink: #e8eaed;
+  --ink-muted: #9aa3ad;
+  --accent: #3d9aaa;
+  --accent-soft: rgba(61, 154, 170, 0.22);
+  --input-bg: #16191d;
+  --scroll-thumb: #4a525c;
+  /* Anthrazit / fast schwarz — ideal für Feuerwerk */
+  --canvas-0: #1a1c1e;
+  --canvas-1: #0e1012;
+  --grid-dot: #2e3338;
+  --layer-active: color-mix(in srgb, var(--accent) 22%, #1a1d21);
 }
 
 *,
@@ -30,6 +55,9 @@ body {
   background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
 }
 
 button,
@@ -44,6 +72,6 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c4bbb0;
+  background: var(--scroll-thumb);
   border-radius: 8px;
 }
