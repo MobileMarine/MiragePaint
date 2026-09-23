@@ -1,14 +1,16 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, effect, signal } from '@angular/core';
 import {
   CirclesParams,
   CircleLineParams,
   DocumentMeta,
   DrawingDocument,
   EllipseParams,
+  FillMode,
   FreehandParams,
   GradientCircleParams,
   GradientParams,
   GroupParams,
+  HeartParams,
   ImportedVectorParams,
   ImportedVectorPath,
   LineParams,
@@ -18,9 +20,12 @@ import {
   RainbowParams,
   RandomStarParams,
   RectParams,
+  RegularPolygonParams,
   Shape,
   ShapeType,
+  StrokeMode,
   StyleProps,
+  SunflowerParams,
   ToolId,
   Transform2D,
   TriangleParams,
@@ -28,12 +33,15 @@ import {
   CenterLinesParams,
   createStyle,
   createTransform,
+  normalizeStyle,
   newShapeId,
 } from '../models/shape';
 import { getAngle } from '../math/polar';
 import { normalizeRect, triangleFromDrag } from '../generators/shapes';
 import { HistoryService } from './history.service';
+import { UiPrefsService } from './ui-prefs.service';
 import { worldBoundsForShape } from '../render/geometry';
+import { COLOR_PRESETS, presetById } from '../style/presets';
 
 const DEFAULT_META: DocumentMeta = {
   background: '',
@@ -46,6 +54,7 @@ const EFFECT_DEFAULTS = {
   randomStar: { arms: 200, radius: 300 },
   circleLine: { arms: 72, radius: 250 },
   circles: { mode: 2 as const, count: 20, sizeMultiply: 1.15, offset: 0.05, width: 40, height: 40 },
+  sunflower: { petals: 18, seedRings: 4 },
   rainbow: { mode: 'gradient' as const },
 };
 
@@ -62,9 +71,20 @@ export class DrawingService {
   readonly strokeEndColor = signal('#1a1a1a');
   readonly strokeWidth = signal(2);
   readonly opacity = signal(1);
+  readonly fillMode = signal<FillMode>('solid');
+  readonly strokeMode = signal<StrokeMode>('solid');
+  readonly fillPresetId = signal<string | null>(null);
+  readonly strokePresetId = signal<string | null>(null);
+  readonly fillAngle = signal(0);
+  readonly strokeAngle = signal(0);
+  readonly fillGradientFrom = signal('#c45c26');
+  readonly fillGradientTo = signal('#f7c948');
+  readonly collapsedSections = signal<Record<string, boolean>>({});
   readonly draft = signal<Shape | null>(null);
 
   readonly effectParams = signal({ ...EFFECT_DEFAULTS });
+
+  readonly colorPresets = COLOR_PRESETS;
 
   readonly selectedId = computed(() => this.selectedIds()[0] ?? null);
 
@@ -93,9 +113,76 @@ export class DrawingService {
   readonly canUndo = computed(() => this.history.canUndo());
   readonly canRedo = computed(() => this.history.canRedo());
 
-  constructor(private readonly history: HistoryService) {
-    this.zoom.set(1);
+  constructor(
+    private readonly history: HistoryService,
+    private readonly uiPrefs: UiPrefsService,
+  ) {
+    this.collapsedSections.set(this.uiPrefs.defaultCollapsed());
+    this.restoreUiPrefs();
     this.pushSnapshot(false);
+
+    effect(() => {
+      this.uiPrefs.save({
+        zoom: this.zoom(),
+        pan: this.pan(),
+        tool: this.tool(),
+        strokeColor: this.strokeColor(),
+        strokeEndColor: this.strokeEndColor(),
+        fillColor: this.fillColor(),
+        strokeWidth: this.strokeWidth(),
+        opacity: this.opacity(),
+        fillMode: this.fillMode(),
+        strokeMode: this.strokeMode(),
+        fillPresetId: this.fillPresetId(),
+        strokePresetId: this.strokePresetId(),
+        fillAngle: this.fillAngle(),
+        strokeAngle: this.strokeAngle(),
+        fillGradientFrom: this.fillGradientFrom(),
+        fillGradientTo: this.fillGradientTo(),
+        effectParams: this.effectParams(),
+        collapsedSections: this.collapsedSections(),
+      });
+    });
+  }
+
+  private restoreUiPrefs(): void {
+    const p = this.uiPrefs.load();
+    if (!p) return;
+    if (typeof p.zoom === 'number') this.zoom.set(Math.min(8, Math.max(0.1, p.zoom)));
+    if (p.pan && typeof p.pan.x === 'number' && typeof p.pan.y === 'number') {
+      this.pan.set({ x: p.pan.x, y: p.pan.y });
+    }
+    if (p.tool) this.tool.set(p.tool);
+    if (p.strokeColor) this.strokeColor.set(p.strokeColor);
+    if (p.strokeEndColor) this.strokeEndColor.set(p.strokeEndColor);
+    if (p.fillColor) this.fillColor.set(p.fillColor);
+    if (typeof p.strokeWidth === 'number') this.strokeWidth.set(p.strokeWidth);
+    if (typeof p.opacity === 'number') this.opacity.set(p.opacity);
+    if (p.fillMode) this.fillMode.set(p.fillMode);
+    if (p.strokeMode) this.strokeMode.set(p.strokeMode);
+    if (p.fillPresetId !== undefined) this.fillPresetId.set(p.fillPresetId);
+    if (p.strokePresetId !== undefined) this.strokePresetId.set(p.strokePresetId);
+    if (typeof p.fillAngle === 'number') this.fillAngle.set(p.fillAngle);
+    if (typeof p.strokeAngle === 'number') this.strokeAngle.set(p.strokeAngle);
+    if (p.fillGradientFrom) this.fillGradientFrom.set(p.fillGradientFrom);
+    if (p.fillGradientTo) this.fillGradientTo.set(p.fillGradientTo);
+    if (p.effectParams && typeof p.effectParams === 'object') {
+      this.effectParams.set({ ...EFFECT_DEFAULTS, ...(p.effectParams as typeof EFFECT_DEFAULTS) });
+    }
+    if (p.collapsedSections) {
+      this.collapsedSections.set({
+        ...this.uiPrefs.defaultCollapsed(),
+        ...p.collapsedSections,
+      });
+    }
+  }
+
+  toggleSection(id: string): void {
+    this.collapsedSections.update((m) => ({ ...m, [id]: !m[id] }));
+  }
+
+  isSectionCollapsed(id: string): boolean {
+    return !!this.collapsedSections()[id];
   }
 
   setTool(tool: ToolId): void {
@@ -204,15 +291,79 @@ export class DrawingService {
     }
     const primary = this.selectedShape();
     if (primary) {
-      this.strokeColor.set(primary.style.stroke);
+      const st = normalizeStyle(primary.style);
+      this.strokeColor.set(st.stroke);
       this.fillColor.set(
-        primary.style.fill === 'none' || primary.style.fill === 'transparent'
-          ? this.fillColor()
-          : primary.style.fill,
+        st.fill === 'none' || st.fill === 'transparent' ? this.fillColor() : st.fill,
       );
-      this.strokeWidth.set(primary.style.strokeWidth);
-      this.opacity.set(primary.style.opacity ?? 1);
-      if (primary.style.strokeEnd) this.strokeEndColor.set(primary.style.strokeEnd);
+      this.strokeWidth.set(st.strokeWidth);
+      this.opacity.set(st.opacity ?? 1);
+      if (st.strokeEnd) this.strokeEndColor.set(st.strokeEnd);
+      this.strokeMode.set(st.strokeMode);
+      this.fillMode.set(st.fillMode);
+      this.strokeAngle.set(st.strokeAngle ?? 0);
+      if (st.fillGradient) {
+        this.fillAngle.set(st.fillGradient.angle);
+        this.fillGradientFrom.set(st.fillGradient.from);
+        this.fillGradientTo.set(st.fillGradient.to);
+        this.fillPresetId.set(st.fillGradient.presetId ?? null);
+      }
+    }
+  }
+
+  reorderShape(fromIndex: number, toIndex: number): void {
+    const list = [...this.shapes()];
+    if (
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      fromIndex >= list.length ||
+      toIndex >= list.length ||
+      fromIndex === toIndex
+    ) {
+      return;
+    }
+    const [item] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, item);
+    this.shapes.set(list);
+    this.pushSnapshot();
+  }
+
+  applyFillPreset(presetId: string | null): void {
+    this.fillPresetId.set(presetId);
+    const p = presetById(presetId);
+    if (p) {
+      this.fillGradientFrom.set(p.from);
+      this.fillGradientTo.set(p.to);
+      this.fillMode.set('gradient');
+      if (this.selectedShape()) {
+        this.updateSelectedStyle({
+          fillMode: 'gradient',
+          fillGradient: {
+            angle: this.fillAngle(),
+            from: p.from,
+            to: p.to,
+            presetId: p.id,
+          },
+        });
+      }
+    }
+  }
+
+  applyStrokePreset(presetId: string | null): void {
+    this.strokePresetId.set(presetId);
+    const p = presetById(presetId);
+    if (p) {
+      this.strokeColor.set(p.from);
+      this.strokeEndColor.set(p.to);
+      this.strokeMode.set('gradient');
+      if (this.selectedShape()) {
+        this.updateSelectedStyle({
+          strokeMode: 'gradient',
+          stroke: p.from,
+          strokeEnd: p.to,
+          strokeAngle: this.strokeAngle(),
+        });
+      }
     }
   }
 
@@ -492,7 +643,7 @@ export class DrawingService {
     this.shapes.set(
       (doc.shapes ?? []).map((s) => ({
         ...s,
-        style: { ...s.style, opacity: s.style?.opacity ?? 1 },
+        style: normalizeStyle(s.style),
       })),
     );
     this.selectedIds.set([]);
@@ -502,13 +653,33 @@ export class DrawingService {
   }
 
   private currentStyle(): StyleProps {
-    return createStyle(
+    const fillMode = this.fillMode();
+    const strokeMode = this.strokeMode();
+    const style = createStyle(
       this.strokeColor(),
-      this.fillColor(),
+      fillMode === 'none' ? 'none' : this.fillColor(),
       this.strokeWidth(),
       this.opacity(),
       this.strokeEndColor(),
     );
+    style.strokeMode = strokeMode;
+    style.strokeAngle = this.strokeAngle();
+    style.fillMode = fillMode;
+    if (fillMode === 'gradient') {
+      style.fillGradient = {
+        angle: this.fillAngle(),
+        from: this.fillGradientFrom(),
+        to: this.fillGradientTo(),
+        presetId: this.fillPresetId() ?? undefined,
+      };
+    } else if (fillMode === 'rainbowGradient' || fillMode === 'rainbowStripes') {
+      style.fillGradient = {
+        angle: this.fillAngle(),
+        from: this.fillGradientFrom(),
+        to: this.fillGradientTo(),
+      };
+    }
+    return style;
   }
 
   private createDragDraft(
@@ -558,6 +729,40 @@ export class DrawingService {
               { x: start.x, y: start.y },
             ],
           } satisfies TriangleParams,
+        };
+      case 'heart':
+        return {
+          id,
+          type: 'heart',
+          style: { ...style, fill: style.fill === 'none' ? 'transparent' : style.fill },
+          transform: createTransform(),
+          params: { x: start.x, y: start.y, width: 0, height: 0 } satisfies HeartParams,
+        };
+      case 'pentagon':
+        return {
+          id,
+          type: 'pentagon',
+          style: { ...style, fill: style.fill === 'none' ? 'transparent' : style.fill },
+          transform: createTransform(),
+          params: {
+            cx: start.x,
+            cy: start.y,
+            radius: 0,
+            rotation: -90,
+          } satisfies RegularPolygonParams,
+        };
+      case 'hexagon':
+        return {
+          id,
+          type: 'hexagon',
+          style: { ...style, fill: style.fill === 'none' ? 'transparent' : style.fill },
+          transform: createTransform(),
+          params: {
+            cx: start.x,
+            cy: start.y,
+            radius: 0,
+            rotation: -90,
+          } satisfies RegularPolygonParams,
         };
       case 'gradient':
         return {
@@ -622,6 +827,19 @@ export class DrawingService {
           transform: createTransform(start.x, start.y),
           params: { ...ep.circles, startAngle: angle } satisfies CirclesParams,
         };
+      case 'sunflower':
+        return {
+          id,
+          type: 'sunflower',
+          style,
+          transform: createTransform(start.x, start.y),
+          params: {
+            petals: ep.sunflower.petals,
+            seedRings: ep.sunflower.seedRings,
+            radius: 40,
+            startAngle: angle,
+          } satisfies SunflowerParams,
+        };
       case 'rainbow': {
         const bandWidth = Math.max(12, style.strokeWidth * 8);
         return {
@@ -681,6 +899,21 @@ export class DrawingService {
           ...d,
           params: { points: triangleFromDrag(start.x, start.y, end.x, end.y) } satisfies TriangleParams,
         };
+      case 'heart': {
+        const r = normalizeRect(start.x, start.y, end.x, end.y);
+        return { ...d, params: r satisfies HeartParams };
+      }
+      case 'pentagon':
+      case 'hexagon':
+        return {
+          ...d,
+          params: {
+            cx: start.x,
+            cy: start.y,
+            radius: Math.max(2, dist),
+            rotation: -90,
+          } satisfies RegularPolygonParams,
+        };
       case 'gradient': {
         const r = normalizeRect(start.x, start.y, end.x, end.y);
         return { ...d, params: r satisfies GradientParams };
@@ -733,6 +966,17 @@ export class DrawingService {
           },
         };
       }
+      case 'sunflower': {
+        const p = d.params as SunflowerParams;
+        return {
+          ...d,
+          params: {
+            ...p,
+            radius: Math.max(20, dist),
+            startAngle: angle,
+          },
+        };
+      }
       case 'rainbow': {
         const p = d.params as RainbowParams;
         // Band thickness scales gently with span so short drags stay readable
@@ -765,14 +1009,24 @@ export class DrawingService {
         return Math.hypot(p.x2 - p.x1, p.y2 - p.y1) < 8;
       }
       case 'rect':
-      case 'gradient': {
-        const p = shape.params as RectParams | GradientParams;
+      case 'gradient':
+      case 'heart': {
+        const p = shape.params as RectParams | GradientParams | HeartParams;
         return p.width < 2 && p.height < 2;
       }
       case 'ellipse':
       case 'gradientCircle': {
         const p = shape.params as EllipseParams | GradientCircleParams;
         return p.rx < 1 && p.ry < 1;
+      }
+      case 'pentagon':
+      case 'hexagon': {
+        const p = shape.params as RegularPolygonParams;
+        return p.radius < 2;
+      }
+      case 'sunflower': {
+        const p = shape.params as SunflowerParams;
+        return p.radius < 8;
       }
       default:
         return false;
@@ -785,7 +1039,7 @@ export class DrawingService {
 
   private restoreSnapshot(doc: DrawingDocument): void {
     this.meta.set(doc.meta);
-    this.shapes.set(doc.shapes);
+    this.shapes.set((doc.shapes ?? []).map((s) => ({ ...s, style: normalizeStyle(s.style) })));
     this.selectedIds.set([]);
     this.draft.set(null);
   }

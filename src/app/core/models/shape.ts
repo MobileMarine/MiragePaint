@@ -5,6 +5,9 @@ export type ToolId =
   | 'rect'
   | 'ellipse'
   | 'triangle'
+  | 'heart'
+  | 'pentagon'
+  | 'hexagon'
   | 'centerLines'
   | 'gradient'
   | 'gradientCircle'
@@ -13,6 +16,7 @@ export type ToolId =
   | 'randomStar'
   | 'circleLine'
   | 'circles'
+  | 'sunflower'
   | 'rainbow';
 
 export interface Point2D {
@@ -28,10 +32,14 @@ export interface Transform2D {
   scaleY: number;
 }
 
+export type FillMode = 'none' | 'solid' | 'gradient' | 'rainbowGradient' | 'rainbowStripes';
+export type StrokeMode = 'none' | 'solid' | 'gradient';
+
 export interface FillGradient {
   angle: number;
   from: string;
   to: string;
+  presetId?: string;
 }
 
 export interface StyleProps {
@@ -41,6 +49,10 @@ export interface StyleProps {
   /** 0–1 overall shape transparency */
   opacity: number;
   strokeEnd?: string;
+  strokeMode: StrokeMode;
+  /** Verlaufswinkel Kante in Grad, 0 = links→rechts */
+  strokeAngle?: number;
+  fillMode: FillMode;
   /** Optional linear fill gradient (angle in degrees, 0 = left→right) */
   fillGradient?: FillGradient;
 }
@@ -72,6 +84,23 @@ export interface EllipseParams {
 
 export interface TriangleParams {
   points: [Point2D, Point2D, Point2D];
+}
+
+/** Axis-aligned heart bounding box. */
+export interface HeartParams {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Regular n-gon centered at (cx, cy). */
+export interface RegularPolygonParams {
+  cx: number;
+  cy: number;
+  radius: number;
+  /** Rotation in degrees */
+  rotation: number;
 }
 
 export interface PolygonParams {
@@ -139,6 +168,13 @@ export interface CirclesParams {
   startAngle: number;
 }
 
+export interface SunflowerParams {
+  petals: number;
+  radius: number;
+  seedRings: number;
+  startAngle: number;
+}
+
 /** Classic rainbow along a semicircle from (x1,y1) to (x2,y2). */
 export type RainbowMode = 'gradient' | 'stripes';
 
@@ -189,6 +225,8 @@ export type ShapeParams =
   | RectParams
   | EllipseParams
   | TriangleParams
+  | HeartParams
+  | RegularPolygonParams
   | PolygonParams
   | CenterLinesParams
   | GradientParams
@@ -198,6 +236,7 @@ export type ShapeParams =
   | RandomStarParams
   | CircleLineParams
   | CirclesParams
+  | SunflowerParams
   | RainbowParams
   | ImportedVectorParams
   | VectorPathParams
@@ -244,7 +283,52 @@ export function createStyle(
   opacity = 1,
   strokeEnd?: string,
 ): StyleProps {
-  return { stroke, fill, strokeWidth, opacity, strokeEnd };
+  const fillNone = !fill || fill === 'none';
+  const strokeNone = !stroke || stroke === 'none';
+  return {
+    stroke,
+    fill,
+    strokeWidth,
+    opacity,
+    strokeEnd,
+    strokeMode: strokeNone ? 'none' : 'solid',
+    strokeAngle: 0,
+    fillMode: fillNone ? 'none' : 'solid',
+  };
+}
+
+/** Normalize style from older documents / partial data. */
+export function normalizeStyle(style: Partial<StyleProps> | undefined | null): StyleProps {
+  const base = createStyle(
+    style?.stroke ?? '#1a1a1a',
+    style?.fill ?? 'none',
+    style?.strokeWidth ?? 2,
+    style?.opacity ?? 1,
+    style?.strokeEnd,
+  );
+  if (!style) return base;
+
+  const fillNone = !style.fill || style.fill === 'none';
+  const strokeNone = !style.stroke || style.stroke === 'none';
+
+  return {
+    ...base,
+    ...style,
+    opacity: style.opacity ?? 1,
+    strokeMode: style.strokeMode ?? (strokeNone ? 'none' : 'solid'),
+    strokeAngle: style.strokeAngle ?? 0,
+    fillMode:
+      style.fillMode ??
+      (style.fillGradient ? 'gradient' : fillNone ? 'none' : 'solid'),
+    fillGradient: style.fillGradient
+      ? {
+          angle: style.fillGradient.angle ?? 0,
+          from: style.fillGradient.from ?? style.fill ?? '#c45c26',
+          to: style.fillGradient.to ?? style.strokeEnd ?? style.stroke ?? '#1a1a1a',
+          presetId: style.fillGradient.presetId,
+        }
+      : undefined,
+  };
 }
 
 export function newShapeId(): string {

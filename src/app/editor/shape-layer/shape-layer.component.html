@@ -1,24 +1,44 @@
 <svg:g [attr.transform]="tAttr" [class.selected]="selected">
   <svg:g [attr.opacity]="shape.style.opacity ?? 1">
-  @if (hasFillGradient && fillGrad; as g) {
+  @if (needsFillDef || needsStrokeDef) {
     <svg:defs>
-      <svg:linearGradient
-        [attr.id]="'fg-' + shape.id"
-        [attr.x1]="fillGradCoords.x1"
-        [attr.y1]="fillGradCoords.y1"
-        [attr.x2]="fillGradCoords.x2"
-        [attr.y2]="fillGradCoords.y2"
-      >
-        <svg:stop offset="0%" [attr.stop-color]="g.from" />
-        <svg:stop offset="100%" [attr.stop-color]="g.to" />
-      </svg:linearGradient>
+      @if (needsFillDef) {
+        <svg:linearGradient
+          [attr.id]="'fill-' + shape.id"
+          [attr.x1]="fillGradCoords.x1"
+          [attr.y1]="fillGradCoords.y1"
+          [attr.x2]="fillGradCoords.x2"
+          [attr.y2]="fillGradCoords.y2"
+        >
+          @if (shape.style.fillMode === 'rainbowGradient' || shape.style.fillMode === 'rainbowStripes') {
+            @for (s of rainbowStops; track $index) {
+              <svg:stop [attr.offset]="s.offset" [attr.stop-color]="s.color" />
+            }
+          } @else {
+            <svg:stop offset="0%" [attr.stop-color]="fillGradFrom" />
+            <svg:stop offset="100%" [attr.stop-color]="fillGradTo" />
+          }
+        </svg:linearGradient>
+      }
+      @if (needsStrokeDef) {
+        <svg:linearGradient
+          [attr.id]="'stroke-' + shape.id"
+          [attr.x1]="strokeGradCoords.x1"
+          [attr.y1]="strokeGradCoords.y1"
+          [attr.x2]="strokeGradCoords.x2"
+          [attr.y2]="strokeGradCoords.y2"
+        >
+          <svg:stop offset="0%" [attr.stop-color]="shape.style.stroke" />
+          <svg:stop offset="100%" [attr.stop-color]="shape.style.strokeEnd || shape.style.stroke" />
+        </svg:linearGradient>
+      }
     </svg:defs>
   }
   @switch (shape.type) {
     @case ('freehand') {
       <svg:path
         [attr.d]="fhPath"
-        [attr.stroke]="shape.style.stroke"
+        [attr.stroke]="strokeAttr"
         [attr.stroke-width]="shape.style.strokeWidth"
         fill="none"
         stroke-linecap="round"
@@ -31,7 +51,7 @@
         [attr.y1]="$any(shape.params).y1"
         [attr.x2]="$any(shape.params).x2"
         [attr.y2]="$any(shape.params).y2"
-        [attr.stroke]="shape.style.stroke"
+        [attr.stroke]="strokeAttr"
         [attr.stroke-width]="shape.style.strokeWidth"
         stroke-linecap="round"
       />
@@ -42,7 +62,7 @@
         [attr.y]="$any(shape.params).y"
         [attr.width]="$any(shape.params).width"
         [attr.height]="$any(shape.params).height"
-        [attr.stroke]="shape.style.stroke"
+        [attr.stroke]="strokeAttr"
         [attr.stroke-width]="shape.style.strokeWidth"
         [attr.fill]="fillAttr"
       />
@@ -53,7 +73,7 @@
         [attr.cy]="$any(shape.params).cy"
         [attr.rx]="$any(shape.params).rx"
         [attr.ry]="$any(shape.params).ry"
-        [attr.stroke]="shape.style.stroke"
+        [attr.stroke]="strokeAttr"
         [attr.stroke-width]="shape.style.strokeWidth"
         [attr.fill]="fillAttr"
       />
@@ -61,7 +81,32 @@
     @case ('triangle') {
       <svg:polygon
         [attr.points]="triPts"
-        [attr.stroke]="shape.style.stroke"
+        [attr.stroke]="strokeAttr"
+        [attr.stroke-width]="shape.style.strokeWidth"
+        [attr.fill]="fillAttr"
+      />
+    }
+    @case ('heart') {
+      <svg:path
+        [attr.d]="heartD"
+        [attr.stroke]="strokeAttr"
+        [attr.stroke-width]="shape.style.strokeWidth"
+        [attr.fill]="fillAttr"
+        stroke-linejoin="round"
+      />
+    }
+    @case ('pentagon') {
+      <svg:polygon
+        [attr.points]="pentagonPts"
+        [attr.stroke]="strokeAttr"
+        [attr.stroke-width]="shape.style.strokeWidth"
+        [attr.fill]="fillAttr"
+      />
+    }
+    @case ('hexagon') {
+      <svg:polygon
+        [attr.points]="hexagonPts"
+        [attr.stroke]="strokeAttr"
         [attr.stroke-width]="shape.style.strokeWidth"
         [attr.fill]="fillAttr"
       />
@@ -69,10 +114,36 @@
     @case ('polygon') {
       <svg:polygon
         [attr.points]="polyPts"
-        [attr.stroke]="shape.style.stroke"
+        [attr.stroke]="strokeAttr"
         [attr.stroke-width]="shape.style.strokeWidth"
         [attr.fill]="fillAttr"
       />
+    }
+    @case ('sunflower') {
+      @if (sunflower; as sun) {
+        @for (petal of sun.petals; track $index) {
+          <svg:g [attr.transform]="'rotate(' + petal.angle + ')'">
+            <svg:ellipse
+              cx="0"
+              [attr.cy]="sun.petalCy"
+              [attr.rx]="sun.petalRx"
+              [attr.ry]="sun.petalRy"
+              [attr.fill]="petal.color"
+              stroke="none"
+            />
+          </svg:g>
+        }
+        @for (seed of sun.seeds; track $index) {
+          <svg:ellipse
+            [attr.cx]="seed.cx"
+            [attr.cy]="seed.cy"
+            [attr.rx]="seed.rx"
+            [attr.ry]="seed.ry"
+            [attr.fill]="seed.fill"
+            stroke="none"
+          />
+        }
+      }
     }
     @case ('rainbow') {
       @for (band of rainbowBands; track $index) {
@@ -93,7 +164,7 @@
           y1="0"
           [attr.x2]="ray.x"
           [attr.y2]="ray.y"
-          [attr.stroke]="shape.style.stroke"
+          [attr.stroke]="strokeAttr"
           [attr.stroke-width]="shape.style.strokeWidth"
           stroke-linecap="round"
         />

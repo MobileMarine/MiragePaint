@@ -15,6 +15,46 @@ import { boundsForShape } from '../../core/render/geometry';
 import { getAngle } from '../../core/math/polar';
 
 type DragMode = 'draw' | 'pan' | 'move' | 'scale' | 'rotate' | null;
+type ScaleHandle = 'nw' | 'ne' | 'se' | 'sw';
+
+const OPPOSITE_HANDLE: Record<ScaleHandle, ScaleHandle> = {
+  nw: 'se',
+  ne: 'sw',
+  se: 'nw',
+  sw: 'ne',
+};
+
+function cornerLocal(
+  handle: ScaleHandle,
+  b: { x: number; y: number; w: number; h: number },
+): Point2D {
+  switch (handle) {
+    case 'nw':
+      return { x: b.x, y: b.y };
+    case 'ne':
+      return { x: b.x + b.w, y: b.y };
+    case 'se':
+      return { x: b.x + b.w, y: b.y + b.h };
+    case 'sw':
+      return { x: b.x, y: b.y + b.h };
+  }
+}
+
+/** Apply translate(rotate(scale(p))) matching SVG transformAttr order. */
+function localToWorld(
+  p: Point2D,
+  t: { x: number; y: number; scaleX: number; scaleY: number; rotation: number },
+): Point2D {
+  const sx = p.x * t.scaleX;
+  const sy = p.y * t.scaleY;
+  const rad = (t.rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  return {
+    x: t.x + sx * cos - sy * sin,
+    y: t.y + sx * sin + sy * cos,
+  };
+}
 
 @Component({
   selector: 'app-viewport',
@@ -38,6 +78,9 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
   private panOrigin: Point2D = { x: 0, y: 0 };
   private moveOrigin: Point2D = { x: 0, y: 0 };
   private shapeOrigin = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
+  private scaleHandle: ScaleHandle | null = null;
+  private scaleBounds = { x: 0, y: 0, w: 1, h: 1 };
+  private scaleAnchorWorld: Point2D = { x: 0, y: 0 };
   private spaceDown = false;
   private resizeObserver?: ResizeObserver;
 
@@ -88,8 +131,14 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
       if (handle && ['nw', 'ne', 'se', 'sw'].includes(handle)) {
         this.dragMode = 'scale';
         this.startWorld = world;
+        this.scaleHandle = handle as ScaleHandle;
         const sel = this.drawing.selectedShape();
-        if (sel) this.shapeOrigin = { ...sel.transform };
+        if (sel) {
+          this.shapeOrigin = { ...sel.transform };
+          this.scaleBounds = boundsForShape(sel);
+          const fixed = cornerLocal(OPPOSITE_HANDLE[this.scaleHandle], this.scaleBounds);
+          this.scaleAnchorWorld = localToWorld(fixed, this.shapeOrigin);
+        }
         return;
       }
 
@@ -150,18 +199,39 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
 
     if (this.dragMode === 'scale') {
       const sel = this.drawing.selectedShape();
-      if (!sel) return;
-      const b = boundsForShape(sel);
-      const cx = sel.transform.x + b.x + b.w / 2;
-      const cy = sel.transform.y + b.y + b.h / 2;
-      const startDist = Math.max(1, Math.hypot(this.startWorld.x - cx, this.startWorld.y - cy));
-      const nowDist = Math.max(1, Math.hypot(world.x - cx, world.y - cy));
-      const factor = nowDist / startDist;
+      const handle = this.scaleHandle;
+      if (!sel || !handle) return;
+
+      const F = cornerLocal(OPPOSITE_HANDLE[handle], this.scaleBounds);
+      const D = cornerLocal(handle, this.scaleBounds);
+      const rad = (this.shapeOrigin.rotation * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      // Mouse relative to fixed opposite corner, in unrotated local axes
+      const dx = world.x - this.scaleAnchorWorld.x;
+      const dy = world.y - this.scaleAnchorWorld.y;
+      const localDx = dx * cos + dy * sin;
+      const localDy = -dx * sin + dy * cos;
+
+      const spanX = D.x - F.x;
+      const spanY = D.y - F.y;
+      const minS = 0.05;
+      let sx1 =
+        Math.abs(spanX) > 1e-6 ? localDx / spanX : this.shapeOrigin.scaleX;
+      let sy1 =
+        Math.abs(spanY) > 1e-6 ? localDy / spanY : this.shapeOrigin.scaleY;
+      if (Math.abs(sx1) < minS) sx1 = Math.sign(sx1 || 1) * minS;
+      if (Math.abs(sy1) < minS) sy1 = Math.sign(sy1 || 1) * minS;
+
+      // Keep opposite corner fixed in world space
+      const scaledFx = sx1 * F.x;
+      const scaledFy = sy1 * F.y;
+      const tx1 = this.scaleAnchorWorld.x - (scaledFx * cos - scaledFy * sin);
+      const ty1 = this.scaleAnchorWorld.y - (scaledFx * sin + scaledFy * cos);
+
       this.drawing.updateSelectedTransform(
-        {
-          scaleX: this.shapeOrigin.scaleX * factor,
-          scaleY: this.shapeOrigin.scaleY * factor,
-        },
+        { x: tx1, y: ty1, scaleX: sx1, scaleY: sy1 },
         false,
       );
       return;
@@ -192,6 +262,7 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
       this.drawing.commitTransform();
     }
     this.dragMode = null;
+    this.scaleHandle = null;
   }
 
   onWheel(ev: WheelEvent): void {

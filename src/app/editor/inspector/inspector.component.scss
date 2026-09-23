@@ -39,6 +39,35 @@ header h2 {
   font-size: 0.82rem;
 }
 
+.block-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.block-toggle h3 {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.chevron {
+  font-size: 1.1rem;
+  color: var(--ink-muted);
+}
+
 .block h3 {
   margin: 0;
   font-size: 0.72rem;
@@ -121,6 +150,64 @@ header h2 {
   margin: 0;
   font-size: 0.75rem;
   color: var(--ink-muted);
+}
+
+.layer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.layer-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.4rem;
+  border: 1px solid transparent;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--ink);
+}
+
+.layer-item:hover {
+  background: var(--panel-hover);
+}
+
+.layer-item.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, #fff);
+}
+
+.drag-handle {
+  font-size: 1rem;
+  color: var(--ink-muted);
+  cursor: grab;
+}
+
+.layer-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-id {
+  font-size: 0.68rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.layer-empty {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  padding: 0.35rem 0.2rem;
 }
 
 .fade-in {

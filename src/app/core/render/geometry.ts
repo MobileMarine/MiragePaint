@@ -6,6 +6,7 @@ import {
   FreehandParams,
   GradientCircleParams,
   GradientParams,
+  HeartParams,
   ImportedVectorParams,
   LineParams,
   MultiStarParams,
@@ -14,7 +15,10 @@ import {
   PolygonParams,
   RainbowParams,
   RectParams,
+  RegularPolygonParams,
   Shape,
+  StyleProps,
+  SunflowerParams,
   TriangleParams,
   VectorPathParams,
   GroupParams,
@@ -26,8 +30,14 @@ import {
   generateMultiStar,
   generateOctopus,
   generateRandomStar,
+  heartPath,
+  regularPolygonPoints,
+  sunflowerLayout,
   GenPrimitive,
 } from '../generators/shapes';
+import { PaletteMode, RAINBOW_COLORS } from '../style/presets';
+
+export { RAINBOW_COLORS, heartPath, regularPolygonPoints, sunflowerLayout };
 
 export function freehandPath(params: FreehandParams): string {
   if (!params.points.length) return '';
@@ -43,15 +53,15 @@ export function polygonPoints(params: PolygonParams): string {
   return params.points.map((p) => `${p.x},${p.y}`).join(' ');
 }
 
-/** Classic outer→inner rainbow colors (red … violet). */
-export const RAINBOW_COLORS = [
-  '#E40303',
-  '#FF8C00',
-  '#FFED00',
-  '#008026',
-  '#24408E',
-  '#732982',
-] as const;
+export function regularPolyPointsAttr(params: RegularPolygonParams, sides: number): string {
+  return regularPolygonPoints(params.cx, params.cy, params.radius, sides, params.rotation)
+    .map((p) => `${p.x},${p.y}`)
+    .join(' ');
+}
+
+export function heartPathAttr(params: HeartParams): string {
+  return heartPath(params.x, params.y, params.width, params.height);
+}
 
 export interface RainbowBand {
   d: string;
@@ -155,9 +165,36 @@ export function transformAttr(t: Shape['transform']): string {
   return `translate(${t.x} ${t.y}) rotate(${t.rotation}) scale(${t.scaleX} ${t.scaleY})`;
 }
 
+/** Resolve palette mode for multi-primitive generators. */
+export function effectPaletteMode(style: StyleProps): PaletteMode {
+  const fm = style.fillMode;
+  if (fm === 'rainbowGradient' || fm === 'rainbowStripes' || fm === 'gradient') return fm;
+  if (style.strokeMode === 'gradient') return 'gradient';
+  return 'solid';
+}
+
+export function effectPaletteColors(style: StyleProps): { from: string; to: string } {
+  if (style.fillMode === 'gradient' && style.fillGradient) {
+    return { from: style.fillGradient.from, to: style.fillGradient.to };
+  }
+  return {
+    from: style.stroke,
+    to: style.strokeEnd ?? style.stroke,
+  };
+}
+
+export function circlesUseFill(style: StyleProps): boolean {
+  const fm = style.fillMode;
+  return fm === 'solid' || fm === 'gradient' || fm === 'rainbowGradient' || fm === 'rainbowStripes';
+}
+
 export function shapePrimitives(shape: Shape): GenPrimitive[] {
   const stroke = shape.style.stroke;
   const end = shape.style.strokeEnd ?? stroke;
+  const mode = effectPaletteMode(shape.style);
+  const { from, to } = effectPaletteColors(shape.style);
+  const palFrom = mode === 'solid' ? stroke : from;
+  const palTo = mode === 'solid' ? stroke : to;
 
   switch (shape.type) {
     case 'octopus': {
@@ -169,8 +206,9 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
         p.radiusX,
         p.radiusY,
         p.startAngle,
-        stroke,
-        end,
+        palFrom,
+        palTo,
+        mode,
       );
     }
     case 'multiStar': {
@@ -182,20 +220,24 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
         p.step,
         p.mode,
         p.startAngle,
-        stroke,
-        end,
+        palFrom,
+        palTo,
+        mode,
       );
     }
     case 'randomStar': {
       const p = shape.params as RandomStarParams;
-      return generateRandomStar(p.arms, p.radius, p.seed, stroke);
+      return generateRandomStar(p.arms, p.radius, p.seed, palFrom, palTo, mode);
     }
     case 'circleLine': {
       const p = shape.params as CircleLineParams;
-      return generateCircleLine(p.arms, p.radius, p.startAngle, stroke);
+      return generateCircleLine(p.arms, p.radius, p.startAngle, palFrom, palTo, mode);
     }
     case 'circles': {
       const p = shape.params as CirclesParams;
+      const filled = circlesUseFill(shape.style);
+      const cFrom = filled && mode === 'solid' ? shape.style.fill || stroke : palFrom;
+      const cTo = filled && mode === 'solid' ? shape.style.fill || stroke : palTo;
       return generateCircles(
         p.mode,
         p.count,
@@ -204,13 +246,15 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
         p.width,
         p.height,
         p.startAngle,
-        stroke,
-        end,
+        cFrom,
+        cTo,
+        mode,
+        filled,
       );
     }
     case 'gradientCircle': {
       const p = shape.params as GradientCircleParams;
-      return generateGradientCircle(-p.rx, -p.ry, p.rx * 2, p.ry * 2, stroke, end);
+      return generateGradientCircle(-p.rx, -p.ry, p.rx * 2, p.ry * 2, palFrom, palTo, mode);
     }
     case 'gradient': {
       const p = shape.params as GradientParams;
@@ -247,13 +291,20 @@ export function boundsForShape(shape: Shape): { x: number; y: number; w: number;
       return { x: cx - r, y: cy - r, w: r * 2 || 1, h: r * 2 || 1 };
     }
     case 'rect':
-    case 'gradient': {
-      const p = shape.params as RectParams | GradientParams;
+    case 'gradient':
+    case 'heart': {
+      const p = shape.params as RectParams | GradientParams | HeartParams;
       return { x: p.x, y: p.y, w: p.width || 1, h: p.height || 1 };
     }
     case 'ellipse': {
       const p = shape.params as EllipseParams;
       return { x: p.cx - p.rx, y: p.cy - p.ry, w: p.rx * 2 || 1, h: p.ry * 2 || 1 };
+    }
+    case 'pentagon':
+    case 'hexagon': {
+      const p = shape.params as RegularPolygonParams;
+      const r = p.radius || 1;
+      return { x: p.cx - r, y: p.cy - r, w: r * 2, h: r * 2 };
     }
     case 'triangle': {
       const pts = (shape.params as TriangleParams).points;
@@ -309,6 +360,11 @@ export function boundsForShape(shape: Shape): { x: number; y: number; w: number;
     case 'circles': {
       const p = shape.params as CirclesParams;
       const r = p.count * p.width * Math.max(p.offset, 0.1) + p.width * 4;
+      return { x: -r, y: -r, w: r * 2, h: r * 2 };
+    }
+    case 'sunflower': {
+      const p = shape.params as SunflowerParams;
+      const r = p.radius || 1;
       return { x: -r, y: -r, w: r * 2, h: r * 2 };
     }
     case 'importedVector': {

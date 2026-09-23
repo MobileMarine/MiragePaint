@@ -2,20 +2,29 @@ import { Component, Input } from '@angular/core';
 import {
   FreehandParams,
   GroupParams,
+  HeartParams,
   PolygonParams,
   RainbowParams,
+  RegularPolygonParams,
   Shape,
+  SunflowerParams,
   TriangleParams,
 } from '../../core/models/shape';
 import {
   boundsForShape,
+  effectPaletteColors,
+  effectPaletteMode,
   freehandPath,
+  heartPathAttr,
   polygonPoints,
   rainbowBands,
+  regularPolyPointsAttr,
   shapePrimitives,
+  sunflowerLayout,
   transformAttr,
   trianglePoints,
 } from '../../core/render/geometry';
+import { RAINBOW_COLORS } from '../../core/style/presets';
 
 @Component({
   selector: 'svg:g[app-shape-layer]',
@@ -49,21 +58,63 @@ export class ShapeLayerComponent {
   }
 
   get fillAttr(): string {
-    if (this.shape.style.fillGradient) return `url(#fg-${this.shape.id})`;
+    const mode = this.shape.style.fillMode;
+    if (mode === 'none') return 'none';
+    if (
+      mode === 'gradient' ||
+      mode === 'rainbowGradient' ||
+      mode === 'rainbowStripes' ||
+      this.shape.style.fillGradient
+    ) {
+      return `url(#fill-${this.shape.id})`;
+    }
     return this.shape.style.fill;
   }
 
-  get hasFillGradient(): boolean {
-    return !!this.shape.style.fillGradient;
+  get strokeAttr(): string {
+    const mode = this.shape.style.strokeMode;
+    if (mode === 'none') return 'none';
+    if (mode === 'gradient') return `url(#stroke-${this.shape.id})`;
+    return this.shape.style.stroke;
   }
 
-  get fillGrad(): { angle: number; from: string; to: string } | null {
-    return this.shape.style.fillGradient ?? null;
+  get needsFillDef(): boolean {
+    const mode = this.shape.style.fillMode;
+    return (
+      mode === 'gradient' ||
+      mode === 'rainbowGradient' ||
+      mode === 'rainbowStripes' ||
+      !!this.shape.style.fillGradient
+    );
   }
 
-  /** Convert angle (0 = left→right) to objectBoundingBox coords */
-  get fillGradCoords(): { x1: string; y1: string; x2: string; y2: string } {
-    const angle = ((this.fillGrad?.angle ?? 0) * Math.PI) / 180;
+  get needsStrokeDef(): boolean {
+    return this.shape.style.strokeMode === 'gradient';
+  }
+
+  get fillGradAngle(): number {
+    return this.shape.style.fillGradient?.angle ?? 0;
+  }
+
+  get strokeGradAngle(): number {
+    return this.shape.style.strokeAngle ?? 0;
+  }
+
+  get fillGradFrom(): string {
+    return this.shape.style.fillGradient?.from ?? this.shape.style.fill ?? '#c45c26';
+  }
+
+  get fillGradTo(): string {
+    return (
+      this.shape.style.fillGradient?.to ??
+      this.shape.style.strokeEnd ??
+      this.shape.style.stroke ??
+      '#1a1a1a'
+    );
+  }
+
+  gradCoords(angleDeg: number): { x1: string; y1: string; x2: string; y2: string } {
+    const angle = (angleDeg * Math.PI) / 180;
     const cx = 0.5;
     const cy = 0.5;
     const dx = Math.cos(angle) * 0.5;
@@ -76,8 +127,70 @@ export class ShapeLayerComponent {
     };
   }
 
+  get fillGradCoords() {
+    return this.gradCoords(this.fillGradAngle);
+  }
+
+  get strokeGradCoords() {
+    return this.gradCoords(this.strokeGradAngle);
+  }
+
+  get rainbowStops(): { offset: string; color: string }[] {
+    const mode = this.shape.style.fillMode;
+    const colors = [...RAINBOW_COLORS];
+    const n = colors.length;
+    if (mode === 'rainbowStripes') {
+      const stops: { offset: string; color: string }[] = [];
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * 100;
+        const b = ((i + 1) / n) * 100;
+        stops.push({ offset: `${a.toFixed(2)}%`, color: colors[i] });
+        stops.push({ offset: `${b.toFixed(2)}%`, color: colors[i] });
+      }
+      return stops;
+    }
+    // soft rainbow gradient
+    return colors.map((color, i) => ({
+      offset: `${((i / Math.max(1, n - 1)) * 100).toFixed(2)}%`,
+      color,
+    }));
+  }
+
   get primitives() {
     return shapePrimitives(this.shape);
+  }
+
+  get heartD(): string {
+    if (this.shape.type !== 'heart') return '';
+    return heartPathAttr(this.shape.params as HeartParams);
+  }
+
+  get pentagonPts(): string {
+    if (this.shape.type !== 'pentagon') return '';
+    return regularPolyPointsAttr(this.shape.params as RegularPolygonParams, 5);
+  }
+
+  get hexagonPts(): string {
+    if (this.shape.type !== 'hexagon') return '';
+    return regularPolyPointsAttr(this.shape.params as RegularPolygonParams, 6);
+  }
+
+  get sunflower() {
+    if (this.shape.type !== 'sunflower') return null;
+    const p = this.shape.params as SunflowerParams;
+    const mode = effectPaletteMode(this.shape.style);
+    const { from, to } = effectPaletteColors(this.shape.style);
+    const palFrom = mode === 'solid' ? this.shape.style.stroke : from;
+    const palTo = mode === 'solid' ? this.shape.style.stroke : to;
+    return sunflowerLayout(
+      p.petals,
+      p.radius,
+      p.seedRings,
+      p.startAngle,
+      palFrom,
+      palTo,
+      mode,
+    );
   }
 
   get bounds() {

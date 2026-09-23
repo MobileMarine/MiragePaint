@@ -51,6 +51,7 @@ function fitToShape(fit: PrimitiveFit, color: RegionColor): Shape | null {
   const fill = color.gradient ? color.gradient.from : color.fill;
   const style = createStyle('none', fill, 0, 1);
   if (color.gradient) {
+    style.fillMode = 'gradient';
     style.fillGradient = color.gradient;
   }
 
