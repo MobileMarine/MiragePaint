@@ -74,6 +74,18 @@
         [attr.fill]="fillAttr"
       />
     }
+    @case ('rainbow') {
+      @for (band of rainbowBands; track $index) {
+        <svg:path
+          [attr.d]="band.d"
+          fill="none"
+          [attr.stroke]="band.color"
+          [attr.stroke-width]="band.width"
+          stroke-linecap="butt"
+          stroke-linejoin="round"
+        />
+      }
+    }
     @case ('centerLines') {
       @for (ray of $any(shape.params).rays; track $index) {
         <svg:line

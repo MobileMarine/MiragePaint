@@ -12,6 +12,7 @@ import {
   OctopusParams,
   RandomStarParams,
   PolygonParams,
+  RainbowParams,
   RectParams,
   Shape,
   TriangleParams,
@@ -40,6 +41,114 @@ export function trianglePoints(params: TriangleParams): string {
 
 export function polygonPoints(params: PolygonParams): string {
   return params.points.map((p) => `${p.x},${p.y}`).join(' ');
+}
+
+/** Classic outer→inner rainbow colors (red … violet). */
+export const RAINBOW_COLORS = [
+  '#E40303',
+  '#FF8C00',
+  '#FFED00',
+  '#008026',
+  '#24408E',
+  '#732982',
+] as const;
+
+export interface RainbowBand {
+  d: string;
+  color: string;
+  width: number;
+}
+
+function lerpHex(a: string, b: string, t: number): string {
+  const parse = (h: string) => {
+    const s = h.replace('#', '');
+    return [
+      parseInt(s.slice(0, 2), 16),
+      parseInt(s.slice(2, 4), 16),
+      parseInt(s.slice(4, 6), 16),
+    ] as const;
+  };
+  const ca = parse(a);
+  const cb = parse(b);
+  const r = Math.round(ca[0] + (cb[0] - ca[0]) * t);
+  const g = Math.round(ca[1] + (cb[1] - ca[1]) * t);
+  const bl = Math.round(ca[2] + (cb[2] - ca[2]) * t);
+  return `#${[r, g, bl].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function rainbowArcPath(
+  cx: number,
+  cy: number,
+  r: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): string {
+  if (r < 0.5) return '';
+  // Semicircle from p1 to p2 (sweep=1). large-arc=0 → 180° or less.
+  return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`;
+}
+
+/**
+ * Build stroke bands for a rainbow semicircle.
+ * Stripes = discrete classic colors; gradient = many lerped bands.
+ */
+export function rainbowBands(params: RainbowParams): RainbowBand[] {
+  const dx = params.x2 - params.x1;
+  const dy = params.y2 - params.y1;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 2) return [];
+
+  const cx = (params.x1 + params.x2) / 2;
+  const cy = (params.y1 + params.y2) / 2;
+  const outerR = dist / 2;
+  const bandW = Math.max(4, params.bandWidth);
+  const innerR = Math.max(1, outerR - bandW);
+
+  const colors =
+    params.mode === 'stripes'
+      ? [...RAINBOW_COLORS]
+      : (() => {
+          const steps = 36;
+          const out: string[] = [];
+          const n = RAINBOW_COLORS.length;
+          for (let i = 0; i < steps; i++) {
+            const u = i / Math.max(1, steps - 1);
+            const f = u * (n - 1);
+            const i0 = Math.floor(f);
+            const i1 = Math.min(n - 1, i0 + 1);
+            out.push(lerpHex(RAINBOW_COLORS[i0], RAINBOW_COLORS[i1], f - i0));
+          }
+          return out;
+        })();
+
+  const count = colors.length;
+  const slice = (outerR - innerR) / count;
+  const bands: RainbowBand[] = [];
+
+  for (let i = 0; i < count; i++) {
+    // Outer red → inner violet
+    const r = outerR - (i + 0.5) * slice;
+    if (r < 1) continue;
+    // Scale endpoints onto this radius circle
+    const ux = (params.x1 - cx) / outerR;
+    const uy = (params.y1 - cy) / outerR;
+    const vx = (params.x2 - cx) / outerR;
+    const vy = (params.y2 - cy) / outerR;
+    const ax = cx + ux * r;
+    const ay = cy + uy * r;
+    const bx = cx + vx * r;
+    const by = cy + vy * r;
+    const d = rainbowArcPath(cx, cy, r, ax, ay, bx, by);
+    if (!d) continue;
+    bands.push({
+      d,
+      color: colors[i],
+      width: Math.max(1.2, slice * (params.mode === 'gradient' ? 1.15 : 1.05)),
+    });
+  }
+  return bands;
 }
 
 export function transformAttr(t: Shape['transform']): string {
@@ -129,6 +238,13 @@ export function boundsForShape(shape: Shape): { x: number; y: number; w: number;
       const x = Math.min(p.x1, p.x2);
       const y = Math.min(p.y1, p.y2);
       return { x, y, w: Math.abs(p.x2 - p.x1) || 1, h: Math.abs(p.y2 - p.y1) || 1 };
+    }
+    case 'rainbow': {
+      const p = shape.params as RainbowParams;
+      const cx = (p.x1 + p.x2) / 2;
+      const cy = (p.y1 + p.y2) / 2;
+      const r = Math.hypot(p.x2 - p.x1, p.y2 - p.y1) / 2 + (p.bandWidth || 0) / 2;
+      return { x: cx - r, y: cy - r, w: r * 2 || 1, h: r * 2 || 1 };
     }
     case 'rect':
     case 'gradient': {

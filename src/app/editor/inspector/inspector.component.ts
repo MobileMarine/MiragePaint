@@ -7,6 +7,8 @@ import {
   CircleLineParams,
   MultiStarParams,
   OctopusParams,
+  RainbowMode,
+  RainbowParams,
   RandomStarParams,
 } from '../../core/models/shape';
 
@@ -65,12 +67,29 @@ export class InspectorComponent {
     this.drawing.updateSelectedParams({ [key]: n });
   }
 
-  updateEffectDefault(group: 'octopus' | 'multiStar' | 'randomStar' | 'circleLine' | 'circles', key: string, value: string | number): void {
-    const n = Number(value);
+  updateEffectDefault(
+    group: 'octopus' | 'multiStar' | 'randomStar' | 'circleLine' | 'circles' | 'rainbow',
+    key: string,
+    value: string | number,
+  ): void {
+    const coerced =
+      group === 'rainbow' && key === 'mode'
+        ? value
+        : typeof value === 'number'
+          ? value
+          : Number(value);
     this.drawing.effectParams.update((ep) => ({
       ...ep,
-      [group]: { ...ep[group], [key]: n },
+      [group]: { ...ep[group], [key]: coerced },
     }));
+  }
+
+  setRainbowMode(mode: RainbowMode): void {
+    const s = this.selected();
+    if (s?.type === 'rainbow') {
+      this.drawing.updateSelectedParams({ mode });
+    }
+    this.updateEffectDefault('rainbow', 'mode', mode);
   }
 
   asOctopus(p: unknown): OctopusParams {
@@ -87,5 +106,14 @@ export class InspectorComponent {
   }
   asCircles(p: unknown): CirclesParams {
     return p as CirclesParams;
+  }
+  asRainbow(p: unknown): RainbowParams {
+    return p as RainbowParams;
+  }
+
+  rainbowMode(): RainbowMode {
+    const s = this.selected();
+    if (s?.type === 'rainbow') return this.asRainbow(s.params).mode;
+    return this.drawing.effectParams().rainbow.mode;
   }
 }

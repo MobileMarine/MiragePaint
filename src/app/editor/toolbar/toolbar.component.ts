@@ -33,6 +33,7 @@ export class ToolbarComponent {
     { id: 'randomStar', icon: 'shutter_speed', label: 'RandomStar', group: 'effect' },
     { id: 'circleLine', icon: 'radar', label: 'CircleLine', group: 'effect' },
     { id: 'circles', icon: 'bubble_chart', label: 'Circles', group: 'effect' },
+    { id: 'rainbow', icon: 'rainbow', label: 'Regenbogen', group: 'effect' },
   ];
 
   select(tool: ToolId): void {

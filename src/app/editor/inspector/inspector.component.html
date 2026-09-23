@@ -252,6 +252,33 @@
         </label>
       </section>
     }
+
+    @if (s.type === 'rainbow') {
+      <section class="block fade-in">
+        <h3>Regenbogen</h3>
+        <label class="row">
+          <span>Darstellung</span>
+          <select
+            [ngModel]="asRainbow(s.params).mode"
+            (ngModelChange)="setRainbowMode($event)"
+          >
+            <option value="gradient">Farbübergang</option>
+            <option value="stripes">Farbstreifen</option>
+          </select>
+        </label>
+        <label class="row">
+          <span>Bandbreite</span>
+          <input
+            type="range"
+            min="8"
+            max="120"
+            [ngModel]="asRainbow(s.params).bandWidth"
+            (ngModelChange)="updateParam('bandWidth', $event)"
+          />
+          <em>{{ asRainbow(s.params).bandWidth | number: '1.0-0' }}px</em>
+        </label>
+      </section>
+    }
   } @else {
     <section class="block muted">
       <p>Kein Objekt ausgewählt. Effekt-Defaults für neue Formen:</p>
@@ -272,6 +299,16 @@
           [ngModel]="drawing.effectParams().multiStar.mode"
           (ngModelChange)="updateEffectDefault('multiStar', 'mode', $event)"
         />
+      </label>
+      <label class="row">
+        <span>Regenbogen</span>
+        <select
+          [ngModel]="drawing.effectParams().rainbow.mode"
+          (ngModelChange)="setRainbowMode($event)"
+        >
+          <option value="gradient">Farbübergang</option>
+          <option value="stripes">Farbstreifen</option>
+        </select>
       </label>
     </section>
   }

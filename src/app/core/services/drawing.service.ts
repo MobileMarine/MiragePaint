@@ -15,6 +15,7 @@ import {
   MultiStarParams,
   OctopusParams,
   Point2D,
+  RainbowParams,
   RandomStarParams,
   RectParams,
   Shape,
@@ -45,6 +46,7 @@ const EFFECT_DEFAULTS = {
   randomStar: { arms: 200, radius: 300 },
   circleLine: { arms: 72, radius: 250 },
   circles: { mode: 2 as const, count: 20, sizeMultiply: 1.15, offset: 0.05, width: 40, height: 40 },
+  rainbow: { mode: 'gradient' as const },
 };
 
 @Injectable({ providedIn: 'root' })
@@ -620,6 +622,23 @@ export class DrawingService {
           transform: createTransform(start.x, start.y),
           params: { ...ep.circles, startAngle: angle } satisfies CirclesParams,
         };
+      case 'rainbow': {
+        const bandWidth = Math.max(12, style.strokeWidth * 8);
+        return {
+          id,
+          type: 'rainbow',
+          style: { ...style, stroke: 'none', fill: 'none' },
+          transform: createTransform(),
+          params: {
+            x1: start.x,
+            y1: start.y,
+            x2: start.x,
+            y2: start.y,
+            mode: ep.rainbow.mode,
+            bandWidth,
+          } satisfies RainbowParams,
+        };
+      }
       default:
         return {
           id,
@@ -714,6 +733,22 @@ export class DrawingService {
           },
         };
       }
+      case 'rainbow': {
+        const p = d.params as RainbowParams;
+        // Band thickness scales gently with span so short drags stay readable
+        const bandWidth = Math.max(12, Math.min(dist * 0.22, d.style.strokeWidth * 14));
+        return {
+          ...d,
+          params: {
+            ...p,
+            x1: start.x,
+            y1: start.y,
+            x2: end.x,
+            y2: end.y,
+            bandWidth,
+          } satisfies RainbowParams,
+        };
+      }
       default:
         return d;
     }
@@ -724,6 +759,10 @@ export class DrawingService {
       case 'line': {
         const p = shape.params as LineParams;
         return Math.hypot(p.x2 - p.x1, p.y2 - p.y1) < 2;
+      }
+      case 'rainbow': {
+        const p = shape.params as RainbowParams;
+        return Math.hypot(p.x2 - p.x1, p.y2 - p.y1) < 8;
       }
       case 'rect':
       case 'gradient': {

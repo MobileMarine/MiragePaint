@@ -3,6 +3,7 @@ import {
   FreehandParams,
   GroupParams,
   PolygonParams,
+  RainbowParams,
   Shape,
   TriangleParams,
 } from '../../core/models/shape';
@@ -10,6 +11,7 @@ import {
   boundsForShape,
   freehandPath,
   polygonPoints,
+  rainbowBands,
   shapePrimitives,
   transformAttr,
   trianglePoints,
@@ -39,6 +41,11 @@ export class ShapeLayerComponent {
 
   get polyPts(): string {
     return polygonPoints(this.shape.params as PolygonParams);
+  }
+
+  get rainbowBands() {
+    if (this.shape.type !== 'rainbow') return [];
+    return rainbowBands(this.shape.params as RainbowParams);
   }
 
   get fillAttr(): string {

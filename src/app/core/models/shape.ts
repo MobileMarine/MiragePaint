@@ -12,7 +12,8 @@ export type ToolId =
   | 'multiStar'
   | 'randomStar'
   | 'circleLine'
-  | 'circles';
+  | 'circles'
+  | 'rainbow';
 
 export interface Point2D {
   x: number;
@@ -138,6 +139,19 @@ export interface CirclesParams {
   startAngle: number;
 }
 
+/** Classic rainbow along a semicircle from (x1,y1) to (x2,y2). */
+export type RainbowMode = 'gradient' | 'stripes';
+
+export interface RainbowParams {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  mode: RainbowMode;
+  /** Total thickness of the rainbow band */
+  bandWidth: number;
+}
+
 export interface ImportedVectorPath {
   d: string;
   fill: string;
@@ -184,6 +198,7 @@ export type ShapeParams =
   | RandomStarParams
   | CircleLineParams
   | CirclesParams
+  | RainbowParams
   | ImportedVectorParams
   | VectorPathParams
   | GroupParams;
