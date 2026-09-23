@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import {
+  CenterLinesParams,
   FreehandParams,
   GroupParams,
   HeartParams,
@@ -16,6 +17,7 @@ import {
   effectPaletteMode,
   freehandPath,
   heartPathAttr,
+  lineColorAt,
   polygonPoints,
   rainbowBands,
   regularPolyPointsAttr,
@@ -55,6 +57,14 @@ export class ShapeLayerComponent {
   get rainbowBands() {
     if (this.shape.type !== 'rainbow') return [];
     return rainbowBands(this.shape.params as RainbowParams);
+  }
+
+  /** Per-ray stroke colors for CenterLines (insertion order). */
+  get centerLineStrokes(): string[] {
+    if (this.shape.type !== 'centerLines') return [];
+    const rays = (this.shape.params as CenterLinesParams).rays;
+    const n = rays.length;
+    return rays.map((_, i) => lineColorAt(this.shape.style, i, n));
   }
 
   get fillAttr(): string {

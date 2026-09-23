@@ -35,7 +35,7 @@ import {
   sunflowerLayout,
   GenPrimitive,
 } from '../generators/shapes';
-import { PaletteMode, RAINBOW_COLORS } from '../style/presets';
+import { colorAt, PaletteMode, RAINBOW_COLORS } from '../style/presets';
 
 export { RAINBOW_COLORS, heartPath, regularPolygonPoints, sunflowerLayout };
 
@@ -186,6 +186,15 @@ export function effectPaletteColors(style: StyleProps): { from: string; to: stri
 export function circlesUseFill(style: StyleProps): boolean {
   const fm = style.fillMode;
   return fm === 'solid' || fm === 'gradient' || fm === 'rainbowGradient' || fm === 'rainbowStripes';
+}
+
+/** Stroke color for line i of n (insertion order), matching MultiStar palette rules. */
+export function lineColorAt(style: StyleProps, i: number, n: number): string {
+  const mode = effectPaletteMode(style);
+  const { from, to } = effectPaletteColors(style);
+  const palFrom = mode === 'solid' ? style.stroke : from;
+  const palTo = mode === 'solid' ? style.stroke : to;
+  return colorAt(i, Math.max(1, n), mode, palFrom, palTo);
 }
 
 export function shapePrimitives(shape: Shape): GenPrimitive[] {

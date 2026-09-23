@@ -164,7 +164,7 @@
           y1="0"
           [attr.x2]="ray.x"
           [attr.y2]="ray.y"
-          [attr.stroke]="strokeAttr"
+          [attr.stroke]="centerLineStrokes[$index] || strokeAttr"
           [attr.stroke-width]="shape.style.strokeWidth"
           stroke-linecap="round"
         />
