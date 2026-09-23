@@ -1,0 +1,139 @@
+<div class="bench">
+  <header>
+    <div>
+      <h1>Formerkennung Bench</h1>
+      <p class="sub">SVG/PNG-Samples → Pipeline → RMSE / SSIM / Struktur</p>
+    </div>
+    <div class="actions">
+      <a routerLink="/" class="link">← Editor</a>
+      <button type="button" class="primary" [disabled]="busy()" (click)="runAll()">
+        {{ busy() ? 'Läuft…' : 'Neu berechnen' }}
+      </button>
+    </div>
+  </header>
+
+  <section class="opts">
+    <label>
+      <span>Farben</span>
+      <input
+        type="range"
+        min="3"
+        max="18"
+        [ngModel]="options().colors"
+        (ngModelChange)="patchOption('colors', +$event)"
+      />
+      <em>{{ options().colors }}</em>
+    </label>
+    <label>
+      <span>Min. Fläche</span>
+      <input
+        type="range"
+        min="8"
+        max="200"
+        [ngModel]="options().minArea"
+        (ngModelChange)="patchOption('minArea', +$event)"
+      />
+      <em>{{ options().minArea }}</em>
+    </label>
+    <label>
+      <span>Min. IoU</span>
+      <input
+        type="range"
+        min="0.3"
+        max="0.85"
+        step="0.01"
+        [ngModel]="options().minIoU"
+        (ngModelChange)="patchOption('minIoU', +$event)"
+      />
+      <em>{{ options().minIoU | number: '1.0-2' }}</em>
+    </label>
+    <label>
+      <span>Vereinfachen</span>
+      <input
+        type="range"
+        min="0.4"
+        max="2.5"
+        step="0.1"
+        [ngModel]="options().simplicity"
+        (ngModelChange)="patchOption('simplicity', +$event)"
+      />
+      <em>{{ options().simplicity | number: '1.0-1' }}</em>
+    </label>
+    <label class="check">
+      <input
+        type="checkbox"
+        [ngModel]="options().gradients"
+        (ngModelChange)="patchOption('gradients', $event)"
+      />
+      <span>Farbübergänge</span>
+    </label>
+    <label class="check">
+      <input
+        type="checkbox"
+        [ngModel]="options().removeBackground"
+        (ngModelChange)="patchOption('removeBackground', $event)"
+      />
+      <span>Hintergrund entfernen</span>
+    </label>
+  </section>
+
+  @if (error(); as err) {
+    <p class="error">{{ err }}</p>
+  }
+
+  <div class="results">
+    @for (r of results(); track r.name) {
+      <article class="card">
+        <header>
+          <h2>{{ r.name }}</h2>
+          <span class="score" [class.good]="r.overall >= 0.7" [class.mid]="r.overall >= 0.45 && r.overall < 0.7">
+            {{ r.overall | number: '1.0-2' }}
+          </span>
+        </header>
+        @if (r.error) {
+          <p class="error">{{ r.error }}</p>
+        }
+        <div class="previews">
+          <div class="pane">
+            <span class="label">Original</span>
+            <div class="media">
+              <img [src]="r.originalUrl" alt="Original" />
+            </div>
+          </div>
+          <div class="pane">
+            <span class="label">Ergebnis ({{ r.shapeCount }} Formen)</span>
+            <div class="media">
+              <div class="svg-host" [innerHTML]="r.previewHtml"></div>
+            </div>
+          </div>
+        </div>
+        <dl class="metrics">
+          <div>
+            <dt>RMSE</dt>
+            <dd>{{ r.pixel.rmse | number: '1.0-1' }}</dd>
+          </div>
+          <div>
+            <dt>SSIM</dt>
+            <dd>{{ r.pixel.ssim | number: '1.0-3' }}</dd>
+          </div>
+          <div>
+            <dt>Kind-Recall</dt>
+            <dd>{{ r.structure.kindRecall | number: '1.0-2' }}</dd>
+          </div>
+          <div>
+            <dt>Referenz</dt>
+            <dd>{{ formatKinds(r.structure.reference) }}</dd>
+          </div>
+          <div>
+            <dt>Erkannt</dt>
+            <dd>{{ formatKinds(r.structure.detected) }}</dd>
+          </div>
+        </dl>
+      </article>
+    } @empty {
+      @if (busy()) {
+        <p class="placeholder">Berechne Samples…</p>
+      }
+    }
+  </div>
+</div>

@@ -2,12 +2,14 @@ import { Component, Input } from '@angular/core';
 import {
   FreehandParams,
   GroupParams,
+  PolygonParams,
   Shape,
   TriangleParams,
 } from '../../core/models/shape';
 import {
   boundsForShape,
   freehandPath,
+  polygonPoints,
   shapePrimitives,
   transformAttr,
   trianglePoints,
@@ -33,6 +35,38 @@ export class ShapeLayerComponent {
 
   get triPts(): string {
     return trianglePoints(this.shape.params as TriangleParams);
+  }
+
+  get polyPts(): string {
+    return polygonPoints(this.shape.params as PolygonParams);
+  }
+
+  get fillAttr(): string {
+    if (this.shape.style.fillGradient) return `url(#fg-${this.shape.id})`;
+    return this.shape.style.fill;
+  }
+
+  get hasFillGradient(): boolean {
+    return !!this.shape.style.fillGradient;
+  }
+
+  get fillGrad(): { angle: number; from: string; to: string } | null {
+    return this.shape.style.fillGradient ?? null;
+  }
+
+  /** Convert angle (0 = left→right) to objectBoundingBox coords */
+  get fillGradCoords(): { x1: string; y1: string; x2: string; y2: string } {
+    const angle = ((this.fillGrad?.angle ?? 0) * Math.PI) / 180;
+    const cx = 0.5;
+    const cy = 0.5;
+    const dx = Math.cos(angle) * 0.5;
+    const dy = Math.sin(angle) * 0.5;
+    return {
+      x1: `${((cx - dx) * 100).toFixed(1)}%`,
+      y1: `${((cy - dy) * 100).toFixed(1)}%`,
+      x2: `${((cx + dx) * 100).toFixed(1)}%`,
+      y2: `${((cy + dy) * 100).toFixed(1)}%`,
+    };
   }
 
   get primitives() {

@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { EditorComponent } from './editor/editor.component';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
-  imports: [EditorComponent],
-  template: `<app-editor />`,
+  imports: [RouterOutlet],
+  template: `<router-outlet />`,
   styles: `
     :host {
       display: block;

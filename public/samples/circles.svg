@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Overlapping circles: body under head (banjo-like) -->
+  <circle cx="100" cy="110" r="70" fill="#8B4513"/>
+  <circle cx="100" cy="95" r="48" fill="#F5DEB3"/>
+  <circle cx="100" cy="95" r="8" fill="#333333"/>
+</svg>

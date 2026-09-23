@@ -1,5 +1,19 @@
 <svg:g [attr.transform]="tAttr" [class.selected]="selected">
   <svg:g [attr.opacity]="shape.style.opacity ?? 1">
+  @if (hasFillGradient && fillGrad; as g) {
+    <svg:defs>
+      <svg:linearGradient
+        [attr.id]="'fg-' + shape.id"
+        [attr.x1]="fillGradCoords.x1"
+        [attr.y1]="fillGradCoords.y1"
+        [attr.x2]="fillGradCoords.x2"
+        [attr.y2]="fillGradCoords.y2"
+      >
+        <svg:stop offset="0%" [attr.stop-color]="g.from" />
+        <svg:stop offset="100%" [attr.stop-color]="g.to" />
+      </svg:linearGradient>
+    </svg:defs>
+  }
   @switch (shape.type) {
     @case ('freehand') {
       <svg:path
@@ -30,7 +44,7 @@
         [attr.height]="$any(shape.params).height"
         [attr.stroke]="shape.style.stroke"
         [attr.stroke-width]="shape.style.strokeWidth"
-        [attr.fill]="shape.style.fill"
+        [attr.fill]="fillAttr"
       />
     }
     @case ('ellipse') {
@@ -41,7 +55,7 @@
         [attr.ry]="$any(shape.params).ry"
         [attr.stroke]="shape.style.stroke"
         [attr.stroke-width]="shape.style.strokeWidth"
-        [attr.fill]="shape.style.fill"
+        [attr.fill]="fillAttr"
       />
     }
     @case ('triangle') {
@@ -49,7 +63,15 @@
         [attr.points]="triPts"
         [attr.stroke]="shape.style.stroke"
         [attr.stroke-width]="shape.style.strokeWidth"
-        [attr.fill]="shape.style.fill"
+        [attr.fill]="fillAttr"
+      />
+    }
+    @case ('polygon') {
+      <svg:polygon
+        [attr.points]="polyPts"
+        [attr.stroke]="shape.style.stroke"
+        [attr.stroke-width]="shape.style.strokeWidth"
+        [attr.fill]="fillAttr"
       />
     }
     @case ('centerLines') {

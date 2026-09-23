@@ -27,6 +27,12 @@ export interface Transform2D {
   scaleY: number;
 }
 
+export interface FillGradient {
+  angle: number;
+  from: string;
+  to: string;
+}
+
 export interface StyleProps {
   stroke: string;
   fill: string;
@@ -34,6 +40,8 @@ export interface StyleProps {
   /** 0–1 overall shape transparency */
   opacity: number;
   strokeEnd?: string;
+  /** Optional linear fill gradient (angle in degrees, 0 = left→right) */
+  fillGradient?: FillGradient;
 }
 
 export interface FreehandParams {
@@ -63,6 +71,11 @@ export interface EllipseParams {
 
 export interface TriangleParams {
   points: [Point2D, Point2D, Point2D];
+}
+
+export interface PolygonParams {
+  points: Point2D[];
+  closed: boolean;
 }
 
 export interface CenterLinesParams {
@@ -162,6 +175,7 @@ export type ShapeParams =
   | RectParams
   | EllipseParams
   | TriangleParams
+  | PolygonParams
   | CenterLinesParams
   | GradientParams
   | GradientCircleParams
@@ -179,7 +193,8 @@ export type ShapeType =
   | Exclude<ToolId, 'select'>
   | 'importedVector'
   | 'vectorPath'
-  | 'group';
+  | 'group'
+  | 'polygon';
 
 export type DrawableTool = Exclude<ToolId, 'select'>;
 

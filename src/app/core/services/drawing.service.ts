@@ -161,6 +161,29 @@ export class DrawingService {
     return id;
   }
 
+  /** Add a group of native shapes (from shape recognition) centered at `at`. */
+  addShapeGroup(children: Shape[], width: number, height: number, at?: Point2D): string {
+    const id = newShapeId();
+    const x = at?.x ?? -width / 2;
+    const y = at?.y ?? -height / 2;
+    const cloned = children.map((c) => ({
+      ...structuredClone(c),
+      id: newShapeId(),
+    }));
+    const shape: Shape = {
+      id,
+      type: 'group',
+      style: createStyle('none', 'none', 0, 1),
+      transform: createTransform(x, y),
+      params: { children: cloned } satisfies GroupParams,
+    };
+    this.shapes.update((list) => [...list, shape]);
+    this.selectedIds.set([id]);
+    this.tool.set('select');
+    this.pushSnapshot();
+    return id;
+  }
+
   selectShape(id: string | null, opts?: { toggle?: boolean }): void {
     this.tool.set('select');
     if (!id) {
@@ -487,7 +510,7 @@ export class DrawingService {
   }
 
   private createDragDraft(
-    tool: Exclude<ShapeType, 'importedVector' | 'vectorPath' | 'group'>,
+    tool: Exclude<ShapeType, 'importedVector' | 'vectorPath' | 'group' | 'polygon'>,
     id: string,
     start: Point2D,
     style: StyleProps,

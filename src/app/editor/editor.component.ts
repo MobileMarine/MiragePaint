@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { DrawingService } from '../core/services/drawing.service';
 import { ExportService } from '../core/services/export.service';
 import { VectorizePreset, VectorizeResult } from '../core/services/vectorize.service';
+import { RecognizeResult } from '../core/services/shape-recognize.service';
+import { ApplyResult } from './vectorize-dialog/vectorize-dialog.component';
 import { ToolbarComponent } from './toolbar/toolbar.component';
 import { ViewportComponent } from './viewport/viewport.component';
 import { InspectorComponent } from './inspector/inspector.component';
@@ -97,16 +99,21 @@ export class EditorComponent {
     await this.vectorizeDialog.openWithFile(file, this.vectorPreset());
   }
 
-  onVectorApplied(result: VectorizeResult): void {
+  onVectorApplied(result: ApplyResult): void {
     const pan = this.drawing.pan();
     const zoom = this.drawing.zoom();
     const vs = this.viewport?.viewSize() ?? { w: 800, h: 600 };
     const worldX = (vs.w / 2 - pan.x) / zoom - result.width / 2;
     const worldY = (vs.h / 2 - pan.y) / zoom - result.height / 2;
-    this.drawing.addImportedVector(result.paths, result.width, result.height, {
-      x: worldX,
-      y: worldY,
-    });
+    const at = { x: worldX, y: worldY };
+
+    if ('kind' in result && result.kind === 'shapes') {
+      const rec = result as RecognizeResult;
+      this.drawing.addShapeGroup(rec.shapes, rec.width, rec.height, at);
+      return;
+    }
+    const contours = result as VectorizeResult;
+    this.drawing.addImportedVector(contours.paths, contours.width, contours.height, at);
   }
 
   exportSvg(): void {

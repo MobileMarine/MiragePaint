@@ -4,6 +4,24 @@
       <header>
         <h2>Bitmap → Vektor</h2>
         <p class="sub">Live-Vorschau</p>
+        <div class="modes" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            [class.active]="mode() === 'shapes'"
+            (click)="setMode('shapes')"
+          >
+            Formen
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.active]="mode() === 'contours'"
+            (click)="setMode('contours')"
+          >
+            Konturen
+          </button>
+        </div>
       </header>
 
       <div class="previews">
@@ -19,9 +37,15 @@
           <span class="label">Vektor {{ busy() ? '…' : '' }}</span>
           <div class="media">
             @if (previewHtml(); as html) {
-              <div class="svg-host" [innerHTML]="html"></div>
+              <div
+                class="preview-frame"
+                [style.aspect-ratio]="previewAspect()"
+                [innerHTML]="html"
+              ></div>
             } @else if (busy()) {
-              <div class="placeholder">Berechne Konturen…</div>
+              <div class="placeholder">
+                {{ mode() === 'shapes' ? 'Erkenne Formen…' : 'Berechne Konturen…' }}
+              </div>
             } @else {
               <div class="placeholder">Keine Vorschau</div>
             }
@@ -34,80 +58,164 @@
       }
 
       <div class="controls">
-        <label>
-          <span>Farben</span>
-          <input
-            type="range"
-            min="4"
-            max="24"
-            [ngModel]="options().numberofcolors"
-            (ngModelChange)="patchOption('numberofcolors', +$event)"
-          />
-          <em>{{ options().numberofcolors }}</em>
-        </label>
-        <label>
-          <span>Flecken</span>
-          <input
-            type="range"
-            min="4"
-            max="60"
-            [ngModel]="options().pathomit"
-            (ngModelChange)="patchOption('pathomit', +$event)"
-          />
-          <em>{{ options().pathomit }}</em>
-        </label>
-        <label>
-          <span>Glätten</span>
-          <input
-            type="range"
-            min="0"
-            max="3"
-            step="1"
-            [ngModel]="options().blurradius"
-            (ngModelChange)="patchOption('blurradius', +$event)"
-          />
-          <em>{{ options().blurradius }}</em>
-        </label>
-        <label>
-          <span>Kurven</span>
-          <input
-            type="range"
-            min="0.4"
-            max="2.5"
-            step="0.1"
-            [ngModel]="options().ltres"
-            (ngModelChange)="patchOptions({ ltres: +$event, qtres: +$event })"
-          />
-          <em>{{ options().ltres | number: '1.0-1' }}</em>
-        </label>
-        <label>
-          <span>Optimieren</span>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.02"
-            [ngModel]="options().optimize"
-            (ngModelChange)="patchOption('optimize', +$event)"
-          />
-          <em>{{ options().optimize | number: '1.0-2' }}</em>
-        </label>
-        <label class="check">
-          <input
-            type="checkbox"
-            [ngModel]="options().removeBackground"
-            (ngModelChange)="patchOption('removeBackground', $event)"
-          />
-          <span>Hintergrund entfernen</span>
-        </label>
-        <label class="check">
-          <input
-            type="checkbox"
-            [ngModel]="options().removeAiTag"
-            (ngModelChange)="patchOption('removeAiTag', $event)"
-          />
-          <span>KI-Tag (Ecke) entfernen</span>
-        </label>
+        @if (mode() === 'shapes') {
+          <label>
+            <span>Farben</span>
+            <input
+              type="range"
+              min="3"
+              max="18"
+              [ngModel]="recognizeOptions().colors"
+              (ngModelChange)="patchRecognizeOption('colors', +$event)"
+            />
+            <em>{{ recognizeOptions().colors }}</em>
+          </label>
+          <label>
+            <span>Min. Fläche</span>
+            <input
+              type="range"
+              min="8"
+              max="200"
+              [ngModel]="recognizeOptions().minArea"
+              (ngModelChange)="patchRecognizeOption('minArea', +$event)"
+            />
+            <em>{{ recognizeOptions().minArea }}</em>
+          </label>
+          <label>
+            <span>Min. IoU</span>
+            <input
+              type="range"
+              min="0.3"
+              max="0.85"
+              step="0.01"
+              [ngModel]="recognizeOptions().minIoU"
+              (ngModelChange)="patchRecognizeOption('minIoU', +$event)"
+            />
+            <em>{{ recognizeOptions().minIoU | number: '1.0-2' }}</em>
+          </label>
+          <label>
+            <span>Max. Eckpunkte</span>
+            <input
+              type="range"
+              min="4"
+              max="24"
+              [ngModel]="recognizeOptions().maxVertices"
+              (ngModelChange)="patchRecognizeOption('maxVertices', +$event)"
+            />
+            <em>{{ recognizeOptions().maxVertices }}</em>
+          </label>
+          <label>
+            <span>Vereinfachen</span>
+            <input
+              type="range"
+              min="0.4"
+              max="2.5"
+              step="0.1"
+              [ngModel]="recognizeOptions().simplicity"
+              (ngModelChange)="patchRecognizeOption('simplicity', +$event)"
+            />
+            <em>{{ recognizeOptions().simplicity | number: '1.0-1' }}</em>
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              [ngModel]="recognizeOptions().gradients"
+              (ngModelChange)="patchRecognizeOption('gradients', $event)"
+            />
+            <span>Farbübergänge</span>
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              [ngModel]="recognizeOptions().removeBackground"
+              (ngModelChange)="patchRecognizeOption('removeBackground', $event)"
+            />
+            <span>Hintergrund entfernen</span>
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              [ngModel]="recognizeOptions().removeAiTag"
+              (ngModelChange)="patchRecognizeOption('removeAiTag', $event)"
+            />
+            <span>KI-Tag (Ecke) entfernen</span>
+          </label>
+        } @else {
+          <label>
+            <span>Farben</span>
+            <input
+              type="range"
+              min="4"
+              max="24"
+              [ngModel]="options().numberofcolors"
+              (ngModelChange)="patchOption('numberofcolors', +$event)"
+            />
+            <em>{{ options().numberofcolors }}</em>
+          </label>
+          <label>
+            <span>Flecken</span>
+            <input
+              type="range"
+              min="4"
+              max="60"
+              [ngModel]="options().pathomit"
+              (ngModelChange)="patchOption('pathomit', +$event)"
+            />
+            <em>{{ options().pathomit }}</em>
+          </label>
+          <label>
+            <span>Glätten</span>
+            <input
+              type="range"
+              min="0"
+              max="3"
+              step="1"
+              [ngModel]="options().blurradius"
+              (ngModelChange)="patchOption('blurradius', +$event)"
+            />
+            <em>{{ options().blurradius }}</em>
+          </label>
+          <label>
+            <span>Kurven</span>
+            <input
+              type="range"
+              min="0.4"
+              max="2.5"
+              step="0.1"
+              [ngModel]="options().ltres"
+              (ngModelChange)="patchOptions({ ltres: +$event, qtres: +$event })"
+            />
+            <em>{{ options().ltres | number: '1.0-1' }}</em>
+          </label>
+          <label>
+            <span>Optimieren</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.02"
+              [ngModel]="options().optimize"
+              (ngModelChange)="patchOption('optimize', +$event)"
+            />
+            <em>{{ options().optimize | number: '1.0-2' }}</em>
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              [ngModel]="options().removeBackground"
+              (ngModelChange)="patchOption('removeBackground', $event)"
+            />
+            <span>Hintergrund entfernen</span>
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              [ngModel]="options().removeAiTag"
+              (ngModelChange)="patchOption('removeAiTag', $event)"
+            />
+            <span>KI-Tag (Ecke) entfernen</span>
+          </label>
+        }
         <label class="check">
           <input
             type="checkbox"
@@ -123,7 +231,7 @@
         <button
           type="button"
           class="primary"
-          [disabled]="!result() || busy()"
+          [disabled]="!canApply()"
           (click)="apply()"
         >
           In Szene übernehmen

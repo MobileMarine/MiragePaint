@@ -1,0 +1,5 @@
+[
+  { "name": "circles", "svg": "circles.svg", "targetCount": 3 },
+  { "name": "strings", "svg": "strings.svg", "targetCount": 4 },
+  { "name": "polygon", "svg": "polygon.svg", "targetCount": 2 }
+]

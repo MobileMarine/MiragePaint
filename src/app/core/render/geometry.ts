@@ -11,6 +11,7 @@ import {
   MultiStarParams,
   OctopusParams,
   RandomStarParams,
+  PolygonParams,
   RectParams,
   Shape,
   TriangleParams,
@@ -34,6 +35,10 @@ export function freehandPath(params: FreehandParams): string {
 }
 
 export function trianglePoints(params: TriangleParams): string {
+  return params.points.map((p) => `${p.x},${p.y}`).join(' ');
+}
+
+export function polygonPoints(params: PolygonParams): string {
   return params.points.map((p) => `${p.x},${p.y}`).join(' ');
 }
 
@@ -136,6 +141,15 @@ export function boundsForShape(shape: Shape): { x: number; y: number; w: number;
     }
     case 'triangle': {
       const pts = (shape.params as TriangleParams).points;
+      const xs = pts.map((p) => p.x);
+      const ys = pts.map((p) => p.y);
+      const x = Math.min(...xs);
+      const y = Math.min(...ys);
+      return { x, y, w: Math.max(...xs) - x || 1, h: Math.max(...ys) - y || 1 };
+    }
+    case 'polygon': {
+      const pts = (shape.params as PolygonParams).points;
+      if (!pts.length) return { x: 0, y: 0, w: 1, h: 1 };
       const xs = pts.map((p) => p.x);
       const ys = pts.map((p) => p.y);
       const x = Math.min(...xs);
