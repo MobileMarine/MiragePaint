@@ -11,6 +11,7 @@ import {
   LineParams,
   MultiStarParams,
   OctopusParams,
+  Point2D,
   RandomStarParams,
   PolygonParams,
   RainbowParams,
@@ -162,8 +163,36 @@ export function rainbowBands(params: RainbowParams): RainbowBand[] {
   return bands;
 }
 
-export function transformAttr(t: Shape['transform']): string {
-  return `translate(${t.x} ${t.y}) rotate(${t.rotation}) scale(${t.scaleX} ${t.scaleY})`;
+export function transformAttr(
+  t: Shape['transform'],
+  pivot: { x: number; y: number } = { x: 0, y: 0 },
+): string {
+  const { x: cx, y: cy } = pivot;
+  // Rotate/scale around shape center (pivot), then translate
+  return `translate(${t.x} ${t.y}) translate(${cx} ${cy}) rotate(${t.rotation}) scale(${t.scaleX} ${t.scaleY}) translate(${-cx} ${-cy})`;
+}
+
+/** Local bounds center used as rotation/scale pivot. */
+export function shapePivot(shape: Shape): { x: number; y: number } {
+  const b = boundsForShape(shape);
+  return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+}
+
+/** Map local point through transform with center pivot. */
+export function localToWorldPoint(
+  p: Point2D,
+  t: Shape['transform'],
+  pivot: { x: number; y: number },
+): Point2D {
+  const lx = (p.x - pivot.x) * t.scaleX;
+  const ly = (p.y - pivot.y) * t.scaleY;
+  const rad = (t.rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  return {
+    x: t.x + pivot.x + lx * cos - ly * sin,
+    y: t.y + pivot.y + lx * sin + ly * cos,
+  };
 }
 
 /** Resolve palette mode for multi-primitive generators. */
@@ -420,27 +449,35 @@ export function boundsForShape(shape: Shape): { x: number; y: number; w: number;
   }
 }
 
-/** Axis-aligned world bounds of a shape including transform (approx., ignores rotation). */
+/** Axis-aligned world bounds of a shape including transform. */
 export function worldBoundsForShape(shape: Shape): { x: number; y: number; w: number; h: number } {
   const b = boundsForShape(shape);
   const t = shape.transform;
+  const pivot = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
   const pad = (shape.style.strokeWidth || 0) / 2;
-  const x = t.x + b.x * t.scaleX - pad;
-  const y = t.y + b.y * t.scaleY - pad;
-  const w = Math.abs(b.w * t.scaleX) + pad * 2;
-  const h = Math.abs(b.h * t.scaleY) + pad * 2;
-
-  if (!t.rotation) return { x, y, w: Math.max(1, w), h: Math.max(1, h) };
-
-  // Expand to cover rotated AABB
-  const cx = x + w / 2;
-  const cy = y + h / 2;
-  const rad = (t.rotation * Math.PI) / 180;
-  const cos = Math.abs(Math.cos(rad));
-  const sin = Math.abs(Math.sin(rad));
-  const rw = w * cos + h * sin;
-  const rh = w * sin + h * cos;
-  return { x: cx - rw / 2, y: cy - rh / 2, w: Math.max(1, rw), h: Math.max(1, rh) };
+  const corners: Point2D[] = [
+    { x: b.x, y: b.y },
+    { x: b.x + b.w, y: b.y },
+    { x: b.x + b.w, y: b.y + b.h },
+    { x: b.x, y: b.y + b.h },
+  ];
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const c of corners) {
+    const w = localToWorldPoint(c, t, pivot);
+    minX = Math.min(minX, w.x);
+    minY = Math.min(minY, w.y);
+    maxX = Math.max(maxX, w.x);
+    maxY = Math.max(maxY, w.y);
+  }
+  return {
+    x: minX - pad,
+    y: minY - pad,
+    w: Math.max(1, maxX - minX + pad * 2),
+    h: Math.max(1, maxY - minY + pad * 2),
+  };
 }
 
 export function contentBounds(

@@ -11,7 +11,7 @@ import {
 import { DrawingService } from '../../core/services/drawing.service';
 import { Point2D, Shape } from '../../core/models/shape';
 import { ShapeLayerComponent } from '../shape-layer/shape-layer.component';
-import { boundsForShape } from '../../core/render/geometry';
+import { boundsForShape, localToWorldPoint, shapePivot } from '../../core/render/geometry';
 import { getAngle } from '../../core/math/polar';
 
 type DragMode = 'draw' | 'pan' | 'move' | 'scale' | 'rotate' | null;
@@ -40,22 +40,6 @@ function cornerLocal(
   }
 }
 
-/** Apply translate(rotate(scale(p))) matching SVG transformAttr order. */
-function localToWorld(
-  p: Point2D,
-  t: { x: number; y: number; scaleX: number; scaleY: number; rotation: number },
-): Point2D {
-  const sx = p.x * t.scaleX;
-  const sy = p.y * t.scaleY;
-  const rad = (t.rotation * Math.PI) / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-  return {
-    x: t.x + sx * cos - sy * sin,
-    y: t.y + sx * sin + sy * cos,
-  };
-}
-
 @Component({
   selector: 'app-viewport',
   standalone: true,
@@ -80,8 +64,10 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
   private shapeOrigin = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
   private scaleHandle: ScaleHandle | null = null;
   private scaleBounds = { x: 0, y: 0, w: 1, h: 1 };
+  private scalePivot = { x: 0, y: 0 };
   private scaleAnchorWorld: Point2D = { x: 0, y: 0 };
   private spaceDown = false;
+  private panFromRightClick = false;
   private resizeObserver?: ResizeObserver;
 
   get svgElement(): SVGSVGElement {
@@ -115,33 +101,18 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
     // Right mouse button or middle / Space / Alt = pan
     if (ev.button === 2 || ev.button === 1 || this.spaceDown || (ev.button === 0 && ev.altKey)) {
       this.dragMode = 'pan';
+      this.panFromRightClick = ev.button === 2;
       this.panOrigin = { ...this.drawing.pan() };
+      return;
+    }
+    this.panFromRightClick = false;
+
+    // Selection handles work in every tool — edit existing shape instead of drawing
+    if (ev.button === 0 && this.tryBeginHandleDrag(target, world)) {
       return;
     }
 
     if (this.drawing.tool() === 'select') {
-      const handle = target.getAttribute?.('data-handle');
-      if (handle === 'rotate') {
-        this.dragMode = 'rotate';
-        this.startWorld = world;
-        const sel = this.drawing.selectedShape();
-        if (sel) this.shapeOrigin = { ...sel.transform };
-        return;
-      }
-      if (handle && ['nw', 'ne', 'se', 'sw'].includes(handle)) {
-        this.dragMode = 'scale';
-        this.startWorld = world;
-        this.scaleHandle = handle as ScaleHandle;
-        const sel = this.drawing.selectedShape();
-        if (sel) {
-          this.shapeOrigin = { ...sel.transform };
-          this.scaleBounds = boundsForShape(sel);
-          const fixed = cornerLocal(OPPOSITE_HANDLE[this.scaleHandle], this.scaleBounds);
-          this.scaleAnchorWorld = localToWorld(fixed, this.shapeOrigin);
-        }
-        return;
-      }
-
       const shapeEl = target.closest?.('[data-shape-id]');
       const id = shapeEl?.getAttribute('data-shape-id');
       if (id) {
@@ -167,6 +138,38 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
     this.dragMode = 'draw';
     this.startWorld = world;
     this.drawing.beginStroke(world);
+  }
+
+  /** Scale/rotate via handles even while a draw tool is active. */
+  private tryBeginHandleDrag(target: Element, world: Point2D): boolean {
+    const handle =
+      target.getAttribute?.('data-handle') ??
+      target.closest?.('[data-handle]')?.getAttribute('data-handle');
+    if (!handle) return false;
+    if (!this.drawing.selectedShape()) return false;
+
+    if (handle === 'rotate') {
+      this.dragMode = 'rotate';
+      this.startWorld = world;
+      const sel = this.drawing.selectedShape();
+      if (sel) this.shapeOrigin = { ...sel.transform };
+      return true;
+    }
+    if (['nw', 'ne', 'se', 'sw'].includes(handle)) {
+      this.dragMode = 'scale';
+      this.startWorld = world;
+      this.scaleHandle = handle as ScaleHandle;
+      const sel = this.drawing.selectedShape();
+      if (sel) {
+        this.shapeOrigin = { ...sel.transform };
+        this.scaleBounds = boundsForShape(sel);
+        this.scalePivot = shapePivot(sel);
+        const fixed = cornerLocal(OPPOSITE_HANDLE[this.scaleHandle], this.scaleBounds);
+        this.scaleAnchorWorld = localToWorldPoint(fixed, this.shapeOrigin, this.scalePivot);
+      }
+      return true;
+    }
+    return false;
   }
 
   onPointerMove(ev: PointerEvent): void {
@@ -204,11 +207,11 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
 
       const F = cornerLocal(OPPOSITE_HANDLE[handle], this.scaleBounds);
       const D = cornerLocal(handle, this.scaleBounds);
+      const pivot = this.scalePivot;
       const rad = (this.shapeOrigin.rotation * Math.PI) / 180;
       const cos = Math.cos(rad);
       const sin = Math.sin(rad);
 
-      // Mouse relative to fixed opposite corner, in unrotated local axes
       const dx = world.x - this.scaleAnchorWorld.x;
       const dy = world.y - this.scaleAnchorWorld.y;
       const localDx = dx * cos + dy * sin;
@@ -224,11 +227,11 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
       if (Math.abs(sx1) < minS) sx1 = Math.sign(sx1 || 1) * minS;
       if (Math.abs(sy1) < minS) sy1 = Math.sign(sy1 || 1) * minS;
 
-      // Keep opposite corner fixed in world space
-      const scaledFx = sx1 * F.x;
-      const scaledFy = sy1 * F.y;
-      const tx1 = this.scaleAnchorWorld.x - (scaledFx * cos - scaledFy * sin);
-      const ty1 = this.scaleAnchorWorld.y - (scaledFx * sin + scaledFy * cos);
+      // Keep opposite corner fixed with center-pivot transform
+      const fx = (F.x - pivot.x) * sx1;
+      const fy = (F.y - pivot.y) * sy1;
+      const tx1 = this.scaleAnchorWorld.x - pivot.x - (fx * cos - fy * sin);
+      const ty1 = this.scaleAnchorWorld.y - pivot.y - (fx * sin + fy * cos);
 
       this.drawing.updateSelectedTransform(
         { x: tx1, y: ty1, scaleX: sx1, scaleY: sy1 },
@@ -240,9 +243,9 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
     if (this.dragMode === 'rotate') {
       const sel = this.drawing.selectedShape();
       if (!sel) return;
-      const b = boundsForShape(sel);
-      const cx = sel.transform.x + b.x + b.w / 2;
-      const cy = sel.transform.y + b.y + b.h / 2;
+      const pivot = shapePivot(sel);
+      const cx = sel.transform.x + pivot.x;
+      const cy = sel.transform.y + pivot.y;
       this.drawing.updateSelectedTransform(
         { rotation: getAngle({ x: cx, y: cy }, world) },
         false,
@@ -260,9 +263,18 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
       this.dragMode === 'rotate'
     ) {
       this.drawing.commitTransform();
+    } else if (this.dragMode === 'pan' && this.panFromRightClick) {
+      const dx = ev.clientX - this.pointerDownScreen.x;
+      const dy = ev.clientY - this.pointerDownScreen.y;
+      // Short right-click without real pan → switch to select
+      if (Math.hypot(dx, dy) < 5) {
+        this.drawing.setPan(this.panOrigin);
+        this.drawing.setTool('select');
+      }
     }
     this.dragMode = null;
     this.scaleHandle = null;
+    this.panFromRightClick = false;
   }
 
   onWheel(ev: WheelEvent): void {

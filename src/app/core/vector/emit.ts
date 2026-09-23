@@ -13,6 +13,7 @@ import {
 } from '../models/shape';
 import { PrimitiveFit } from './fit';
 import { RegionColor } from './gradient';
+import { shapePivot, transformAttr } from '../render/geometry';
 
 export interface FittedRegion {
   fit: PrimitiveFit;
@@ -179,10 +180,9 @@ function shapeToSvgFragment(
   outlinesOnly: boolean,
 ): string {
   const t = shape.transform;
-  const tf =
-    t.x || t.y || t.rotation || t.scaleX !== 1 || t.scaleY !== 1
-      ? ` transform="translate(${t.x} ${t.y}) rotate(${t.rotation}) scale(${t.scaleX} ${t.scaleY})"`
-      : '';
+  const hasTf =
+    t.x || t.y || t.rotation || t.scaleX !== 1 || t.scaleY !== 1;
+  const tf = hasTf ? ` transform="${transformAttr(t, shapePivot(shape))}"` : '';
   const op = shape.style.opacity ?? 1;
   const opAttr = op < 1 ? ` opacity="${op}"` : '';
 

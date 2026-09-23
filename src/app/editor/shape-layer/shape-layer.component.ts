@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import {
   CenterLinesParams,
   FireworkParams,
@@ -29,6 +29,7 @@ import {
 } from '../../core/render/geometry';
 import { evaluateFirework } from '../../core/generators/firework';
 import { RAINBOW_COLORS } from '../../core/style/presets';
+import { DrawingService } from '../../core/services/drawing.service';
 
 @Component({
   selector: 'svg:g[app-shape-layer]',
@@ -40,8 +41,14 @@ export class ShapeLayerComponent {
   @Input({ required: true }) shape!: Shape;
   @Input() selected = false;
 
+  private readonly drawing = inject(DrawingService);
+
   get tAttr(): string {
-    return transformAttr(this.shape.transform);
+    const b = boundsForShape(this.shape);
+    return transformAttr(this.shape.transform, {
+      x: b.x + b.w / 2,
+      y: b.y + b.h / 2,
+    });
   }
 
   get fhPath(): string {
@@ -235,5 +242,40 @@ export class ShapeLayerComponent {
       { id: 'se', x: b.x + b.w, y: b.y + b.h },
       { id: 'sw', x: b.x, y: b.y + b.h },
     ];
+  }
+
+  /** Local units so that after shape scale × zoom the size is ~`px` screen pixels. */
+  private screenAxis(px: number, axisScale: number): number {
+    const z = Math.max(0.05, this.drawing.zoom());
+    const s = Math.max(0.05, Math.abs(axisScale));
+    return px / (z * s);
+  }
+
+  get handleHalfX(): number {
+    return this.screenAxis(5, this.shape.transform.scaleX);
+  }
+
+  get handleHalfY(): number {
+    return this.screenAxis(5, this.shape.transform.scaleY);
+  }
+
+  get handleW(): number {
+    return this.handleHalfX * 2;
+  }
+
+  get handleH(): number {
+    return this.handleHalfY * 2;
+  }
+
+  get rotateOffset(): number {
+    return this.screenAxis(28, this.shape.transform.scaleY);
+  }
+
+  get rotateRx(): number {
+    return this.screenAxis(6, this.shape.transform.scaleX);
+  }
+
+  get rotateRy(): number {
+    return this.screenAxis(6, this.shape.transform.scaleY);
   }
 }

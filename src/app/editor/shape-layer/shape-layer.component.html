@@ -350,10 +350,10 @@
       />
       @for (h of handles; track h.id) {
         <svg:rect
-          [attr.x]="h.x - 5"
-          [attr.y]="h.y - 5"
-          width="10"
-          height="10"
+          [attr.x]="h.x - handleHalfX"
+          [attr.y]="h.y - handleHalfY"
+          [attr.width]="handleW"
+          [attr.height]="handleH"
           fill="#fff"
           stroke="#2a6f7a"
           stroke-width="1.5"
@@ -365,16 +365,17 @@
         [attr.x1]="bounds.x + bounds.w / 2"
         [attr.y1]="bounds.y"
         [attr.x2]="bounds.x + bounds.w / 2"
-        [attr.y2]="bounds.y - 28"
+        [attr.y2]="bounds.y - rotateOffset"
         stroke="#2a6f7a"
         stroke-width="1"
         vector-effect="non-scaling-stroke"
         pointer-events="none"
       />
-      <svg:circle
+      <svg:ellipse
         [attr.cx]="bounds.x + bounds.w / 2"
-        [attr.cy]="bounds.y - 28"
-        r="6"
+        [attr.cy]="bounds.y - rotateOffset"
+        [attr.rx]="rotateRx"
+        [attr.ry]="rotateRy"
         fill="#2a6f7a"
         stroke="#fff"
         stroke-width="1.5"
