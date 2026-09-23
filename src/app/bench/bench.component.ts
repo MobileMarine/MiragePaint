@@ -9,6 +9,7 @@ import {
   ShapeRecognizeService,
 } from '../core/services/shape-recognize.service';
 import {
+  countSvgPrimitives,
   overallScore,
   pixelScore,
   PixelScore,
@@ -16,11 +17,19 @@ import {
   StructureScore,
 } from '../core/vector/score';
 
+/** Build-time discovery of sample SVGs under public/samples/{simple,medium}. */
+const SAMPLE_SVGS = import.meta.glob('../../../public/samples/{simple,medium}/*.svg', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
 interface SampleMeta {
   name: string;
-  svg: string;
-  png?: string;
-  targetCount?: number;
+  tier: string;
+  svgText: string;
+  publicPath: string;
+  targetCount: number;
 }
 
 interface SampleResult {
@@ -28,10 +37,33 @@ interface SampleResult {
   originalUrl: string;
   previewHtml: SafeHtml;
   shapeCount: number;
+  targetCount: number;
   pixel: PixelScore;
   structure: StructureScore;
   overall: number;
   error?: string;
+}
+
+function discoverSamples(): SampleMeta[] {
+  const samples: SampleMeta[] = [];
+  for (const [path, svgText] of Object.entries(SAMPLE_SVGS)) {
+    const normalized = path.replace(/\\/g, '/');
+    const match = /\/samples\/(simple|medium)\/([^/]+)\.svg$/i.exec(normalized);
+    if (!match) continue;
+    const tier = match[1];
+    const base = match[2];
+    const counts = countSvgPrimitives(svgText);
+    const targetCount = Object.values(counts).reduce((a, b) => a + b, 0);
+    samples.push({
+      name: `${tier}/${base}`,
+      tier,
+      svgText,
+      publicPath: `/samples/${tier}/${base}.svg`,
+      targetCount,
+    });
+  }
+  samples.sort((a, b) => a.name.localeCompare(b.name));
+  return samples;
 }
 
 @Component({
@@ -63,9 +95,12 @@ export class BenchComponent implements OnInit {
     this.error.set(null);
     this.results.set([]);
     try {
-      const index = (await fetch('/samples/index.json').then((r) => r.json())) as SampleMeta[];
+      const samples = discoverSamples();
+      if (!samples.length) {
+        throw new Error('Keine Samples unter /samples/simple oder /samples/medium gefunden.');
+      }
       const out: SampleResult[] = [];
-      for (const sample of index) {
+      for (const sample of samples) {
         out.push(await this.runSample(sample));
         this.results.set([...out]);
       }
@@ -77,14 +112,15 @@ export class BenchComponent implements OnInit {
   }
 
   private async runSample(sample: SampleMeta): Promise<SampleResult> {
-    const svgText = await fetch(`/samples/${sample.svg}`).then((r) => r.text());
+    const svgText = sample.svgText;
     let imageData: ImageData;
     let originalUrl: string;
 
-    if (sample.png) {
-      const blob = await fetch(`/samples/${sample.png}`).then((r) => r.blob());
-      originalUrl = URL.createObjectURL(blob);
-      imageData = await this.blobToImageData(blob);
+    const pngPath = sample.publicPath.replace(/\.svg$/i, '.png');
+    const pngBlob = await this.tryFetchBlob(pngPath);
+    if (pngBlob) {
+      originalUrl = URL.createObjectURL(pngBlob);
+      imageData = await this.blobToImageData(pngBlob);
     } else {
       const raster = await this.rasterizeSvg(svgText, 256);
       imageData = raster.imageData;
@@ -100,7 +136,6 @@ export class BenchComponent implements OnInit {
         false,
       );
       const rendered = await this.rasterizeSvg(previewSvg, imageData.width);
-      // Match sizes
       const aligned = this.resizeImageData(rendered.imageData, imageData.width, imageData.height);
       const pixel = pixelScore(imageData, aligned);
       const structure = structureScore(svgText, result.shapes);
@@ -111,6 +146,7 @@ export class BenchComponent implements OnInit {
         originalUrl,
         previewHtml: this.sanitizer.bypassSecurityTrustHtml(previewSvg),
         shapeCount: result.shapes.length,
+        targetCount: sample.targetCount,
         pixel,
         structure,
         overall,
@@ -121,11 +157,22 @@ export class BenchComponent implements OnInit {
         originalUrl,
         previewHtml: this.sanitizer.bypassSecurityTrustHtml('<svg></svg>'),
         shapeCount: 0,
+        targetCount: sample.targetCount,
         pixel: { rmse: 255, ssim: 0, score: 0 },
         structure: { reference: {}, detected: {}, kindRecall: 0, countError: 1 },
         overall: 0,
         error: err instanceof Error ? err.message : 'Fehler',
       };
+    }
+  }
+
+  private async tryFetchBlob(url: string): Promise<Blob | null> {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return await res.blob();
+    } catch {
+      return null;
     }
   }
 
