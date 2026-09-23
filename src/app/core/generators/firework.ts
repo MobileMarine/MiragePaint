@@ -21,18 +21,9 @@ export interface FwSpark {
   opacity: number;
 }
 
-export interface FwSmoke {
-  x: number;
-  y: number;
-  rx: number;
-  ry: number;
-  opacity: number;
-}
-
 export interface FireworkFrame {
   streaks: FwStreak[];
   sparks: FwSpark[];
-  smoke: FwSmoke[];
 }
 
 function easeOutCubic(t: number): number {
@@ -228,7 +219,6 @@ export function evaluateFirework(params: FireworkParams, t = 1): FireworkFrame {
   const radius = Math.max(20, params.radius);
   const wind = Math.max(-1, Math.min(1, params.wind));
   const bursts = Math.max(1, Math.min(3, Math.floor(params.bursts)));
-  const smokeAmt = Math.max(0, Math.min(1, params.smoke));
   const isFountain = cfg.fountain > 0.5;
 
   // Flight time scale so tip ~radius at peak without gravity
@@ -239,7 +229,6 @@ export function evaluateFirework(params: FireworkParams, t = 1): FireworkFrame {
 
   const streaks: FwStreak[] = [];
   const sparks: FwSpark[] = [];
-  const smoke: FwSmoke[] = [];
   const particles: Ballistic[] = [];
 
   // Launch trail (shell rising) — skip for fountain
@@ -404,34 +393,5 @@ export function evaluateFirework(params: FireworkParams, t = 1): FireworkFrame {
     }
   }
 
-  // Smoke
-  const smokeCount = Math.round(6 + smokeAmt * 26);
-  for (let i = 0; i < smokeCount; i++) {
-    const ang = rng() * Math.PI * 2;
-    const d = rng() * radius * (isFountain ? 0.45 : 0.8) * progress;
-    const x = Math.cos(ang) * d + wind * d * 0.5;
-    const y = isFountain
-      ? -Math.abs(Math.sin(ang)) * d * 0.3 + rng() * radius * 0.15 * progress
-      : Math.sin(ang) * d + cfg.gravity * d * 0.12;
-    smoke.push({
-      x,
-      y,
-      rx: 5 + rng() * 16 * smokeAmt,
-      ry: 4 + rng() * 11 * smokeAmt,
-      opacity: smokeAmt * (0.07 + rng() * 0.12) * Math.min(1, progress * 1.2),
-    });
-  }
-
-  // Core flash / fountain nozzle glow
-  if (progress > 0.12) {
-    sparks.push({
-      x: wind * 4 * progress,
-      y: isFountain ? 2 : 0,
-      r: (isFountain ? 4 : 3) + radius * 0.035 * progress,
-      color: '#ffffff',
-      opacity: (isFountain ? 0.7 : 0.5) * progress,
-    });
-  }
-
-  return { streaks, sparks, smoke };
+  return { streaks, sparks };
 }

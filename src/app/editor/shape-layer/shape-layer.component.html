@@ -151,37 +151,7 @@
     }
     @case ('firework') {
       @if (fireworkFrame; as fw) {
-        <svg:defs>
-          <svg:filter
-            [attr.id]="'fw-glow-' + shape.id"
-            x="-50%"
-            y="-50%"
-            width="200%"
-            height="200%"
-          >
-            <svg:feGaussianBlur
-              in="SourceGraphic"
-              [attr.stdDeviation]="fireworkGlowStd"
-              result="blur"
-            />
-            <svg:feMerge>
-              <svg:feMergeNode in="blur" />
-              <svg:feMergeNode in="SourceGraphic" />
-            </svg:feMerge>
-          </svg:filter>
-        </svg:defs>
-        @for (s of fw.smoke; track $index) {
-          <svg:ellipse
-            [attr.cx]="s.x"
-            [attr.cy]="s.y"
-            [attr.rx]="s.rx"
-            [attr.ry]="s.ry"
-            fill="#9aa3ad"
-            [attr.opacity]="s.opacity"
-            stroke="none"
-          />
-        }
-        <svg:g [attr.filter]="'url(#fw-glow-' + shape.id + ')'">
+        <svg:g>
           @for (st of fw.streaks; track $index) {
             <svg:line
               [attr.x1]="st.x1"

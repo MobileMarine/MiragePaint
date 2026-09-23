@@ -12,10 +12,27 @@ export const FIREWORK_NEON_POOL: readonly string[][] = [
   ['#80ffdb', '#72efdd', '#56cfe1'],
 ];
 
+const FIREWORK_RAINBOW = [
+  '#E40303',
+  '#FF8C00',
+  '#FFED00',
+  '#008026',
+  '#24408E',
+  '#732982',
+] as const;
+
 export const FIREWORK_SCHEME_COLORS: Record<
   Exclude<FireworkScheme, 'random' | 'neon'>,
   { colors: string[]; trail: string }
 > = {
+  rainbow: {
+    colors: [...FIREWORK_RAINBOW],
+    trail: '#FFED00',
+  },
+  pinkLilac: {
+    colors: ['#fff0f5', '#ff9ecd', '#ff4da6', '#e879f9', '#c084fc', '#a855f7', '#7c3aed'],
+    trail: '#f9a8d4',
+  },
   gold: { colors: ['#ffe566', '#ffc300', '#ff8c00', '#fff8dc'], trail: '#ffd60a' },
   bluePink: { colors: ['#4cc9f0', '#4361ee', '#f72585', '#ff99c8'], trail: '#a0c4ff' },
   yellowRed: { colors: ['#ffea00', '#ffbe0b', '#e63946', '#ff6b35'], trail: '#ffd166' },
@@ -36,7 +53,6 @@ export function pickFireworkColors(scheme: FireworkScheme, seed: number): Firewo
     return { colors: [...palette], trail: palette[0] };
   }
   if (scheme === 'random') {
-    // Mix pair schemes + neon for variety
     const keys = Object.keys(FIREWORK_SCHEME_COLORS) as (keyof typeof FIREWORK_SCHEME_COLORS)[];
     if (rng() < 0.45) {
       const palette = FIREWORK_NEON_POOL[Math.floor(rng() * FIREWORK_NEON_POOL.length)];

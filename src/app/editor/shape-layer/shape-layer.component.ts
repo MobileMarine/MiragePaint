@@ -235,12 +235,6 @@ export class ShapeLayerComponent {
     return evaluateFirework(p, t);
   }
 
-  get fireworkGlowStd(): number {
-    if (this.shape.type !== 'firework') return 0;
-    const g = (this.shape.params as FireworkParams).glow ?? 0.7;
-    return 1.5 + g * 4;
-  }
-
   get bounds() {
     return boundsForShape(this.shape);
   }

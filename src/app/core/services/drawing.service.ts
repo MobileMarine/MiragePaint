@@ -62,8 +62,6 @@ const EFFECT_DEFAULTS = {
   firework: {
     variant: 'chrysanthemum' as FireworkVariant,
     bursts: 1,
-    smoke: 0.55,
-    glow: 0.75,
     scheme: 'neon' as FireworkScheme,
   },
   rainbow: { mode: 'gradient' as const },
@@ -616,8 +614,6 @@ export class DrawingService {
           variant: ep.variant,
           scheme,
           bursts: ep.bursts,
-          smoke: ep.smoke,
-          glow: ep.glow,
           animT: 0,
         } satisfies FireworkParams,
       });

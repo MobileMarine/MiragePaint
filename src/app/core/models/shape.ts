@@ -198,6 +198,8 @@ export type FireworkVariant =
 export type FireworkScheme =
   | 'neon'
   | 'random'
+  | 'rainbow'
+  | 'pinkLilac'
   | 'gold'
   | 'bluePink'
   | 'yellowRed'
@@ -212,8 +214,10 @@ export interface FireworkParams {
   variant: FireworkVariant;
   scheme: FireworkScheme;
   bursts: number;
-  smoke: number;
-  glow: number;
+  /** @deprecated Unused — kept for older documents */
+  smoke?: number;
+  /** @deprecated Unused — kept for older documents */
+  glow?: number;
   /** Transient 0..1 while animating draft; treated as 1 when omitted. */
   animT?: number;
 }
