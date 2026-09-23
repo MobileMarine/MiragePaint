@@ -1,0 +1,80 @@
+<div
+  #host
+  class="viewport"
+  (wheel)="onWheel($event)"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerUp($event)"
+  (contextmenu)="onContextMenu($event)"
+>
+  <svg
+    #svgRoot
+    class="canvas-svg"
+    [attr.viewBox]="'0 0 ' + viewSize().w + ' ' + viewSize().h"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <!-- Infinite canvas backdrop (screen space, not part of export) -->
+    <svg:rect
+      class="viewport-bg"
+      x="0"
+      y="0"
+      [attr.width]="viewSize().w"
+      [attr.height]="viewSize().h"
+      fill="url(#paperGrad)"
+    />
+    <svg:defs>
+      <svg:linearGradient id="paperGrad" x1="0" y1="0" x2="1" y2="1">
+        <svg:stop offset="0%" stop-color="#e8e2d8" />
+        <svg:stop offset="100%" stop-color="#d9d2c6" />
+      </svg:linearGradient>
+      <svg:pattern
+        id="dotGrid"
+        width="24"
+        height="24"
+        patternUnits="userSpaceOnUse"
+        [attr.patternTransform]="'translate(' + drawing.pan().x + ' ' + drawing.pan().y + ') scale(' + drawing.zoom() + ')'"
+      >
+        <svg:circle cx="1" cy="1" r="1" fill="#c4bbb0" />
+      </svg:pattern>
+    </svg:defs>
+    <svg:rect
+      class="grid-layer"
+      x="0"
+      y="0"
+      [attr.width]="viewSize().w"
+      [attr.height]="viewSize().h"
+      fill="url(#dotGrid)"
+      opacity="0.55"
+      pointer-events="none"
+    />
+
+    <svg:g
+      #stage
+      class="stage"
+      [attr.transform]="
+        'translate(' +
+        drawing.pan().x +
+        ' ' +
+        drawing.pan().y +
+        ') scale(' +
+        drawing.zoom() +
+        ')'
+      "
+    >
+      @for (s of drawing.shapes(); track trackShape($index, s)) {
+        <svg:g
+          app-shape-layer
+          [attr.data-shape-id]="s.id"
+          [shape]="s"
+          [selected]="drawing.selectedIds().includes(s.id)"
+          (click)="selectShape(s.id, $event); $event.stopPropagation()"
+        ></svg:g>
+      }
+
+      @if (drawing.draft(); as draft) {
+        <svg:g app-shape-layer [shape]="draft" [selected]="false" class="draft"></svg:g>
+      }
+    </svg:g>
+  </svg>
+</div>

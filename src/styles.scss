@@ -1,0 +1,49 @@
+:root {
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-ui: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+
+  --bg: #ebe6de;
+  --panel: #f7f3ec;
+  --panel-soft: #efe9df;
+  --panel-hover: #e4ddd2;
+  --line: #d2cbc0;
+  --ink: #241f1a;
+  --ink-muted: #6d645a;
+  --accent: #2a6f7a;
+  --accent-soft: rgba(42, 111, 122, 0.14);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c4bbb0;
+  border-radius: 8px;
+}

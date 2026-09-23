@@ -1,0 +1,95 @@
+<div class="editor">
+  <header class="topbar">
+    <div class="identity">
+      <h1>MiragePaint</h1>
+      <span class="subtitle">Vektor-Grafikeditor</span>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="ghost" title="Neu" (click)="newDoc()">
+        <span class="material-symbols-outlined">note_add</span>
+      </button>
+      <button
+        type="button"
+        class="ghost"
+        title="Rückgängig"
+        [disabled]="!drawing.canUndo()"
+        (click)="undo()"
+      >
+        <span class="material-symbols-outlined">undo</span>
+      </button>
+      <button
+        type="button"
+        class="ghost"
+        title="Wiederholen"
+        [disabled]="!drawing.canRedo()"
+        (click)="redo()"
+      >
+        <span class="material-symbols-outlined">redo</span>
+      </button>
+
+      <div class="sep"></div>
+
+      <button type="button" class="ghost" title="Verkleinern" (click)="zoomOut()">
+        <span class="material-symbols-outlined">zoom_out</span>
+      </button>
+      <button type="button" class="zoom-label" title="Zoom zurücksetzen" (click)="zoomReset()">
+        {{ drawing.zoom() * 100 | number: '1.0-0' }}%
+      </button>
+      <button type="button" class="ghost" title="Vergrößern" (click)="zoomIn()">
+        <span class="material-symbols-outlined">zoom_in</span>
+      </button>
+
+      <div class="sep"></div>
+
+      <select
+        class="preset-select"
+        title="Vektorisierungs-Qualität (Startwerte)"
+        [ngModel]="vectorPreset()"
+        (ngModelChange)="vectorPreset.set($event)"
+      >
+        <option value="simple">Einfach</option>
+        <option value="balanced">Ausgewogen</option>
+        <option value="detail">Detail</option>
+      </select>
+      <label class="primary file-btn" title="Bitmap → Vektor importieren">
+        <span class="material-symbols-outlined">photo_library</span>
+        Bild → Vektor
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif,image/bmp"
+          (change)="importBitmap($event)"
+        />
+      </label>
+
+      <div class="sep"></div>
+
+      <button type="button" class="ghost" title="Aus localStorage laden" (click)="loadLocal()">
+        <span class="material-symbols-outlined">folder_open</span>
+      </button>
+      <label class="ghost file-btn" title="JSON laden">
+        <span class="material-symbols-outlined">upload_file</span>
+        <input type="file" accept=".json,.mirage.json,application/json" (change)="loadJson($event)" />
+      </label>
+      <button type="button" class="ghost" title="Speichern (JSON)" (click)="saveJson()">
+        <span class="material-symbols-outlined">save</span>
+      </button>
+      <button type="button" class="primary" title="SVG exportieren" (click)="exportSvg()">
+        <span class="material-symbols-outlined">fullscreen</span>
+        SVG
+      </button>
+      <button type="button" class="primary" title="PNG exportieren" (click)="exportPng()">
+        <span class="material-symbols-outlined">image</span>
+        PNG
+      </button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <app-toolbar />
+    <app-viewport />
+    <app-inspector />
+  </div>
+
+  <app-vectorize-dialog (applied)="onVectorApplied($event)" />
+</div>

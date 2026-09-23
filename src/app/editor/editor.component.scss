@@ -1,0 +1,166 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 1rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  z-index: 3;
+}
+
+.identity {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.identity h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.subtitle {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.sep {
+  width: 1px;
+  height: 1.4rem;
+  background: var(--line);
+  margin: 0 0.25rem;
+}
+
+button,
+.file-btn {
+  font: inherit;
+}
+
+.ghost,
+.primary,
+.zoom-label,
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 0;
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.ghost,
+.file-btn,
+.zoom-label {
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.ghost:hover:not(:disabled),
+.file-btn:hover,
+.zoom-label:hover {
+  background: var(--panel-hover);
+  color: var(--ink);
+}
+
+.ghost:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.primary {
+  background: var(--accent);
+  color: #f7f3ec;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.primary:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.zoom-label {
+  min-width: 3.2rem;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+.file-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.file-btn.busy {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.file-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.preset-select {
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  padding: 0.3rem 0.45rem;
+  background: var(--panel-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  height: 0; /* force flex child to fill remaining viewport */
+}
+
+.material-symbols-outlined {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+@media (max-width: 900px) {
+  .subtitle {
+    display: none;
+  }
+
+  .inspector {
+    display: none;
+  }
+}

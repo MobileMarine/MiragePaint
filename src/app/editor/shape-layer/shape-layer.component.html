@@ -1,0 +1,223 @@
+<svg:g [attr.transform]="tAttr" [class.selected]="selected">
+  <svg:g [attr.opacity]="shape.style.opacity ?? 1">
+  @switch (shape.type) {
+    @case ('freehand') {
+      <svg:path
+        [attr.d]="fhPath"
+        [attr.stroke]="shape.style.stroke"
+        [attr.stroke-width]="shape.style.strokeWidth"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    }
+    @case ('line') {
+      <svg:line
+        [attr.x1]="$any(shape.params).x1"
+        [attr.y1]="$any(shape.params).y1"
+        [attr.x2]="$any(shape.params).x2"
+        [attr.y2]="$any(shape.params).y2"
+        [attr.stroke]="shape.style.stroke"
+        [attr.stroke-width]="shape.style.strokeWidth"
+        stroke-linecap="round"
+      />
+    }
+    @case ('rect') {
+      <svg:rect
+        [attr.x]="$any(shape.params).x"
+        [attr.y]="$any(shape.params).y"
+        [attr.width]="$any(shape.params).width"
+        [attr.height]="$any(shape.params).height"
+        [attr.stroke]="shape.style.stroke"
+        [attr.stroke-width]="shape.style.strokeWidth"
+        [attr.fill]="shape.style.fill"
+      />
+    }
+    @case ('ellipse') {
+      <svg:ellipse
+        [attr.cx]="$any(shape.params).cx"
+        [attr.cy]="$any(shape.params).cy"
+        [attr.rx]="$any(shape.params).rx"
+        [attr.ry]="$any(shape.params).ry"
+        [attr.stroke]="shape.style.stroke"
+        [attr.stroke-width]="shape.style.strokeWidth"
+        [attr.fill]="shape.style.fill"
+      />
+    }
+    @case ('triangle') {
+      <svg:polygon
+        [attr.points]="triPts"
+        [attr.stroke]="shape.style.stroke"
+        [attr.stroke-width]="shape.style.strokeWidth"
+        [attr.fill]="shape.style.fill"
+      />
+    }
+    @case ('centerLines') {
+      @for (ray of $any(shape.params).rays; track $index) {
+        <svg:line
+          x1="0"
+          y1="0"
+          [attr.x2]="ray.x"
+          [attr.y2]="ray.y"
+          [attr.stroke]="shape.style.stroke"
+          [attr.stroke-width]="shape.style.strokeWidth"
+          stroke-linecap="round"
+        />
+      }
+    }
+    @case ('gradient') {
+      <svg:defs>
+        <svg:linearGradient [attr.id]="'grad-' + shape.id" x1="0%" y1="0%" x2="100%" y2="100%">
+          <svg:stop offset="0%" [attr.stop-color]="shape.style.stroke" />
+          <svg:stop offset="100%" [attr.stop-color]="shape.style.strokeEnd || shape.style.stroke" />
+        </svg:linearGradient>
+      </svg:defs>
+      <svg:rect
+        [attr.x]="$any(shape.params).x"
+        [attr.y]="$any(shape.params).y"
+        [attr.width]="$any(shape.params).width"
+        [attr.height]="$any(shape.params).height"
+        [attr.fill]="'url(#grad-' + shape.id + ')'"
+      />
+    }
+    @case ('importedVector') {
+      <svg:defs>
+        @for (p of $any(shape.params).paths; track $index) {
+          @if (p.gradient) {
+            <svg:linearGradient
+              [attr.id]="'iv-' + shape.id + '-' + $index"
+              gradientUnits="userSpaceOnUse"
+              [attr.x1]="p.gradient.x1"
+              [attr.y1]="p.gradient.y1"
+              [attr.x2]="p.gradient.x2"
+              [attr.y2]="p.gradient.y2"
+            >
+              <svg:stop offset="0%" [attr.stop-color]="p.gradient.c1" />
+              <svg:stop offset="100%" [attr.stop-color]="p.gradient.c2" />
+            </svg:linearGradient>
+          }
+        }
+      </svg:defs>
+      @for (p of $any(shape.params).paths; track $index) {
+        <svg:path
+          [attr.d]="p.d"
+          [attr.fill]="p.gradient ? 'url(#iv-' + shape.id + '-' + $index + ')' : p.fill"
+          stroke="none"
+        />
+      }
+    }
+    @case ('vectorPath') {
+      <svg:defs>
+        @if ($any(shape.params).gradient) {
+          <svg:linearGradient
+            [attr.id]="'vp-' + shape.id"
+            gradientUnits="userSpaceOnUse"
+            [attr.x1]="$any(shape.params).gradient.x1"
+            [attr.y1]="$any(shape.params).gradient.y1"
+            [attr.x2]="$any(shape.params).gradient.x2"
+            [attr.y2]="$any(shape.params).gradient.y2"
+          >
+            <svg:stop offset="0%" [attr.stop-color]="$any(shape.params).gradient.c1" />
+            <svg:stop offset="100%" [attr.stop-color]="$any(shape.params).gradient.c2" />
+          </svg:linearGradient>
+        }
+      </svg:defs>
+      <svg:path
+        [attr.d]="$any(shape.params).d"
+        [attr.fill]="
+          $any(shape.params).gradient ? 'url(#vp-' + shape.id + ')' : $any(shape.params).fill
+        "
+        stroke="none"
+      />
+    }
+    @case ('group') {
+      @for (child of groupChildren; track child.id) {
+        <svg:g app-shape-layer [shape]="child" [selected]="false"></svg:g>
+      }
+    }
+    @default {
+      @for (prim of primitives; track $index) {
+        @if (prim.kind === 'line') {
+          <svg:line
+            [attr.x1]="prim.x1"
+            [attr.y1]="prim.y1"
+            [attr.x2]="prim.x2"
+            [attr.y2]="prim.y2"
+            [attr.stroke]="prim.stroke"
+            [attr.stroke-width]="shape.style.strokeWidth"
+            stroke-linecap="round"
+          />
+        } @else if (prim.kind === 'ellipse') {
+          <svg:ellipse
+            [attr.cx]="prim.cx"
+            [attr.cy]="prim.cy"
+            [attr.rx]="prim.rx"
+            [attr.ry]="prim.ry"
+            [attr.fill]="prim.fill"
+            [attr.stroke]="prim.stroke || 'none'"
+            [attr.stroke-width]="prim.stroke ? shape.style.strokeWidth : 0"
+          />
+        } @else if (prim.kind === 'rect') {
+          <svg:rect
+            [attr.x]="prim.x"
+            [attr.y]="prim.y"
+            [attr.width]="prim.width"
+            [attr.height]="prim.height"
+            [attr.fill]="prim.fill"
+          />
+        }
+      }
+    }
+  }
+  </svg:g>
+
+  @if (selected) {
+    <svg:g data-ui="true" class="selection-ui">
+      <svg:rect
+        [attr.x]="bounds.x"
+        [attr.y]="bounds.y"
+        [attr.width]="bounds.w"
+        [attr.height]="bounds.h"
+        fill="none"
+        stroke="#2a6f7a"
+        stroke-width="1"
+        stroke-dasharray="4 3"
+        vector-effect="non-scaling-stroke"
+        pointer-events="none"
+      />
+      @for (h of handles; track h.id) {
+        <svg:rect
+          [attr.x]="h.x - 5"
+          [attr.y]="h.y - 5"
+          width="10"
+          height="10"
+          fill="#fff"
+          stroke="#2a6f7a"
+          stroke-width="1.5"
+          [attr.data-handle]="h.id"
+          vector-effect="non-scaling-stroke"
+        />
+      }
+      <svg:line
+        [attr.x1]="bounds.x + bounds.w / 2"
+        [attr.y1]="bounds.y"
+        [attr.x2]="bounds.x + bounds.w / 2"
+        [attr.y2]="bounds.y - 28"
+        stroke="#2a6f7a"
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
+        pointer-events="none"
+      />
+      <svg:circle
+        [attr.cx]="bounds.x + bounds.w / 2"
+        [attr.cy]="bounds.y - 28"
+        r="6"
+        fill="#2a6f7a"
+        stroke="#fff"
+        stroke-width="1.5"
+        data-handle="rotate"
+        vector-effect="non-scaling-stroke"
+      />
+    </svg:g>
+  }
+</svg:g>

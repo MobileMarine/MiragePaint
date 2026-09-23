@@ -1,0 +1,278 @@
+<aside class="inspector">
+  <header>
+    <h2>Eigenschaften</h2>
+    <p class="hint">Farbe, Dicke und Formparameter</p>
+  </header>
+
+  <section class="block">
+    <h3>Stift</h3>
+    <label class="row">
+      <span>Farbe</span>
+      <input
+        type="color"
+        [value]="drawing.strokeColor()"
+        (input)="onStroke($any($event.target).value)"
+      />
+    </label>
+    <label class="row">
+      <span>Verlauf-Ende</span>
+      <input
+        type="color"
+        [value]="drawing.strokeEndColor()"
+        (input)="onStrokeEnd($any($event.target).value)"
+      />
+    </label>
+    <label class="row">
+      <span>Füllung</span>
+      <input
+        type="color"
+        [value]="drawing.fillColor()"
+        (input)="onFill($any($event.target).value)"
+      />
+    </label>
+    <label class="row">
+      <span>Dicke</span>
+      <input
+        type="range"
+        min="1"
+        max="24"
+        [value]="drawing.strokeWidth()"
+        (input)="onWidth($any($event.target).value)"
+      />
+      <em>{{ drawing.strokeWidth() }}px</em>
+    </label>
+    <label class="row">
+      <span>Transparenz</span>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        [value]="selected()?.style.opacity ?? drawing.opacity()"
+        (input)="onOpacity($any($event.target).value)"
+      />
+      <em>{{ ((selected()?.style.opacity ?? drawing.opacity()) * 100 | number: '1.0-0') }}%</em>
+    </label>
+  </section>
+
+  @if (drawing.canGroup() || drawing.canUngroup()) {
+    <section class="block fade-in">
+      <h3>Gruppe</h3>
+      @if (drawing.canGroup()) {
+        <button type="button" class="action-btn" (click)="drawing.groupSelected()">
+          Gruppieren
+        </button>
+      }
+      @if (drawing.canUngroup()) {
+        <button type="button" class="action-btn" (click)="drawing.ungroupSelected()">
+          Gruppierung aufheben
+        </button>
+      }
+      @if (drawing.selectedIds().length > 1) {
+        <p class="hint">{{ drawing.selectedIds().length }} Elemente ausgewählt</p>
+      }
+    </section>
+  }
+
+  @if (selected(); as s) {
+    <section class="block fade-in">
+      <h3>Transform</h3>
+      <label class="row">
+        <span>Rotation</span>
+        <input
+          type="range"
+          min="0"
+          max="360"
+          [value]="s.transform.rotation"
+          (input)="onRotation($any($event.target).value)"
+        />
+        <em>{{ s.transform.rotation | number: '1.0-0' }}°</em>
+      </label>
+      <label class="row">
+        <span>Skalierung</span>
+        <input
+          type="range"
+          min="0.1"
+          max="4"
+          step="0.05"
+          [value]="s.transform.scaleX"
+          (input)="onScale($any($event.target).value)"
+        />
+        <em>{{ s.transform.scaleX | number: '1.0-2' }}×</em>
+      </label>
+    </section>
+
+    @if (s.type === 'octopus') {
+      <section class="block fade-in">
+        <h3>Octopussy</h3>
+        <label class="row">
+          <span>Arme</span>
+          <input
+            type="number"
+            min="1"
+            max="24"
+            [ngModel]="asOctopus(s.params).arms"
+            (ngModelChange)="updateParam('arms', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Kreise</span>
+          <input
+            type="number"
+            min="1"
+            max="120"
+            [ngModel]="asOctopus(s.params).circles"
+            (ngModelChange)="updateParam('circles', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Kurve</span>
+          <input
+            type="number"
+            step="0.5"
+            [ngModel]="asOctopus(s.params).curve"
+            (ngModelChange)="updateParam('curve', $event)"
+          />
+        </label>
+      </section>
+    }
+
+    @if (s.type === 'multiStar') {
+      <section class="block fade-in">
+        <h3>MultiStar</h3>
+        <label class="row">
+          <span>Modus</span>
+          <select
+            [ngModel]="asMulti(s.params).mode"
+            (ngModelChange)="updateParam('mode', $event)"
+          >
+            <option [ngValue]="1">Kreuz</option>
+            <option [ngValue]="2">Achsen</option>
+            <option [ngValue]="3">Fächer</option>
+            <option [ngValue]="4">N-Arme</option>
+          </select>
+        </label>
+        <label class="row">
+          <span>Arme</span>
+          <input
+            type="number"
+            min="2"
+            max="24"
+            [ngModel]="asMulti(s.params).arms"
+            (ngModelChange)="updateParam('arms', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Stufen</span>
+          <input
+            type="number"
+            min="1"
+            max="80"
+            [ngModel]="asMulti(s.params).stages"
+            (ngModelChange)="updateParam('stages', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Schritt</span>
+          <input
+            type="number"
+            min="1"
+            max="40"
+            [ngModel]="asMulti(s.params).step"
+            (ngModelChange)="updateParam('step', $event)"
+          />
+        </label>
+      </section>
+    }
+
+    @if (s.type === 'randomStar') {
+      <section class="block fade-in">
+        <h3>RandomStar</h3>
+        <label class="row">
+          <span>Arme</span>
+          <input
+            type="number"
+            min="10"
+            max="2000"
+            [ngModel]="asRandom(s.params).arms"
+            (ngModelChange)="updateParam('arms', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Radius</span>
+          <input
+            type="number"
+            min="10"
+            [ngModel]="asRandom(s.params).radius"
+            (ngModelChange)="updateParam('radius', $event)"
+          />
+        </label>
+      </section>
+    }
+
+    @if (s.type === 'circleLine') {
+      <section class="block fade-in">
+        <h3>CircleLine</h3>
+        <label class="row">
+          <span>Arme</span>
+          <input
+            type="number"
+            min="3"
+            max="720"
+            [ngModel]="asCircleLine(s.params).arms"
+            (ngModelChange)="updateParam('arms', $event)"
+          />
+        </label>
+      </section>
+    }
+
+    @if (s.type === 'circles') {
+      <section class="block fade-in">
+        <h3>Circles</h3>
+        <label class="row">
+          <span>Anzahl</span>
+          <input
+            type="number"
+            min="1"
+            max="80"
+            [ngModel]="asCircles(s.params).count"
+            (ngModelChange)="updateParam('count', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Wachstum</span>
+          <input
+            type="number"
+            step="0.05"
+            min="1"
+            max="2"
+            [ngModel]="asCircles(s.params).sizeMultiply"
+            (ngModelChange)="updateParam('sizeMultiply', $event)"
+          />
+        </label>
+      </section>
+    }
+  } @else {
+    <section class="block muted">
+      <p>Kein Objekt ausgewählt. Effekt-Defaults für neue Formen:</p>
+      <label class="row">
+        <span>Octopus-Arme</span>
+        <input
+          type="number"
+          [ngModel]="drawing.effectParams().octopus.arms"
+          (ngModelChange)="updateEffectDefault('octopus', 'arms', $event)"
+        />
+      </label>
+      <label class="row">
+        <span>MultiStar-Modus</span>
+        <input
+          type="number"
+          min="1"
+          max="4"
+          [ngModel]="drawing.effectParams().multiStar.mode"
+          (ngModelChange)="updateEffectDefault('multiStar', 'mode', $event)"
+        />
+      </label>
+    </section>
+  }
+</aside>

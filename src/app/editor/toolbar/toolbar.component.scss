@@ -1,0 +1,83 @@
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 3.5rem;
+  padding: 0.75rem 0.4rem;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  z-index: 2;
+}
+
+.brand-mark {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.35rem;
+  border-radius: 0.55rem;
+  background: linear-gradient(145deg, #2a6f7a, #1d4f57);
+  color: #f4efe6;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.04em;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  align-items: center;
+}
+
+.group.scroll {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.divider {
+  width: 1.6rem;
+  height: 1px;
+  background: var(--line);
+  margin: 0.25rem 0;
+}
+
+.tool {
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--ink-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.tool:hover {
+  background: var(--panel-hover);
+  color: var(--ink);
+}
+
+.tool.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  transform: scale(1.06);
+}
+
+.tool .material-symbols-outlined {
+  font-size: 1.35rem;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}

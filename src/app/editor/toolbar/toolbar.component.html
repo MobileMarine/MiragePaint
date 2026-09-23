@@ -1,0 +1,55 @@
+<aside class="toolbar">
+  <div class="brand-mark" title="MiragePaint">M</div>
+
+  <div class="group">
+    @for (t of tools; track t.id) {
+      @if (t.group === 'select') {
+        <button
+          type="button"
+          class="tool"
+          [class.active]="drawing.tool() === t.id"
+          [title]="t.label"
+          (click)="select(t.id)"
+        >
+          <span class="material-symbols-outlined">{{ t.icon }}</span>
+        </button>
+      }
+    }
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="group">
+    @for (t of tools; track t.id) {
+      @if (t.group === 'basic') {
+        <button
+          type="button"
+          class="tool"
+          [class.active]="drawing.tool() === t.id"
+          [title]="t.label"
+          (click)="select(t.id)"
+        >
+          <span class="material-symbols-outlined">{{ t.icon }}</span>
+        </button>
+      }
+    }
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="group scroll">
+    @for (t of tools; track t.id) {
+      @if (t.group === 'effect') {
+        <button
+          type="button"
+          class="tool"
+          [class.active]="drawing.tool() === t.id"
+          [title]="t.label"
+          (click)="select(t.id)"
+        >
+          <span class="material-symbols-outlined">{{ t.icon }}</span>
+        </button>
+      }
+    }
+  </div>
+</aside>

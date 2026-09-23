@@ -1,0 +1,137 @@
+.inspector {
+  width: 16.5rem;
+  flex-shrink: 0;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  padding: 1rem 0.9rem 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.7rem 0.65rem;
+  border-radius: 0.65rem;
+  background: var(--panel-soft);
+}
+
+.block.muted {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
+.block h3 {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+
+.row span {
+  grid-column: 1;
+}
+
+.row input[type='color'] {
+  width: 2rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.3rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.row input[type='range'] {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.row input[type='number'],
+.row select {
+  width: 4.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  padding: 0.25rem 0.35rem;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.row em {
+  grid-column: 2;
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  justify-self: end;
+}
+
+.action-btn {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.55rem;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.action-btn:hover {
+  background: var(--panel-hover);
+  color: var(--accent);
+}
+
+.block .hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.fade-in {
+  animation: rise 220ms ease;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

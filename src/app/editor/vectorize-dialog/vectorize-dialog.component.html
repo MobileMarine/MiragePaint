@@ -1,0 +1,134 @@
+@if (open()) {
+  <div class="backdrop" (click)="close()">
+    <div class="dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header>
+        <h2>Bitmap → Vektor</h2>
+        <p class="sub">Live-Vorschau</p>
+      </header>
+
+      <div class="previews">
+        <div class="pane">
+          <span class="label">Original</span>
+          <div class="media">
+            @if (originalUrl(); as url) {
+              <img [src]="url" alt="Original" />
+            }
+          </div>
+        </div>
+        <div class="pane">
+          <span class="label">Vektor {{ busy() ? '…' : '' }}</span>
+          <div class="media">
+            @if (previewHtml(); as html) {
+              <div class="svg-host" [innerHTML]="html"></div>
+            } @else if (busy()) {
+              <div class="placeholder">Berechne Konturen…</div>
+            } @else {
+              <div class="placeholder">Keine Vorschau</div>
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (error(); as err) {
+        <p class="error">{{ err }}</p>
+      }
+
+      <div class="controls">
+        <label>
+          <span>Farben</span>
+          <input
+            type="range"
+            min="4"
+            max="24"
+            [ngModel]="options().numberofcolors"
+            (ngModelChange)="patchOption('numberofcolors', +$event)"
+          />
+          <em>{{ options().numberofcolors }}</em>
+        </label>
+        <label>
+          <span>Flecken</span>
+          <input
+            type="range"
+            min="4"
+            max="60"
+            [ngModel]="options().pathomit"
+            (ngModelChange)="patchOption('pathomit', +$event)"
+          />
+          <em>{{ options().pathomit }}</em>
+        </label>
+        <label>
+          <span>Glätten</span>
+          <input
+            type="range"
+            min="0"
+            max="3"
+            step="1"
+            [ngModel]="options().blurradius"
+            (ngModelChange)="patchOption('blurradius', +$event)"
+          />
+          <em>{{ options().blurradius }}</em>
+        </label>
+        <label>
+          <span>Kurven</span>
+          <input
+            type="range"
+            min="0.4"
+            max="2.5"
+            step="0.1"
+            [ngModel]="options().ltres"
+            (ngModelChange)="patchOptions({ ltres: +$event, qtres: +$event })"
+          />
+          <em>{{ options().ltres | number: '1.0-1' }}</em>
+        </label>
+        <label>
+          <span>Optimieren</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.02"
+            [ngModel]="options().optimize"
+            (ngModelChange)="patchOption('optimize', +$event)"
+          />
+          <em>{{ options().optimize | number: '1.0-2' }}</em>
+        </label>
+        <label class="check">
+          <input
+            type="checkbox"
+            [ngModel]="options().removeBackground"
+            (ngModelChange)="patchOption('removeBackground', $event)"
+          />
+          <span>Hintergrund entfernen</span>
+        </label>
+        <label class="check">
+          <input
+            type="checkbox"
+            [ngModel]="options().removeAiTag"
+            (ngModelChange)="patchOption('removeAiTag', $event)"
+          />
+          <span>KI-Tag (Ecke) entfernen</span>
+        </label>
+        <label class="check">
+          <input
+            type="checkbox"
+            [ngModel]="contoursOnly()"
+            (ngModelChange)="setContoursOnly($event)"
+          />
+          <span>Nur Konturen</span>
+        </label>
+      </div>
+
+      <footer>
+        <button type="button" class="ghost" (click)="close()">Abbrechen</button>
+        <button
+          type="button"
+          class="primary"
+          [disabled]="!result() || busy()"
+          (click)="apply()"
+        >
+          In Szene übernehmen
+        </button>
+      </footer>
+    </div>
+  </div>
+}
