@@ -4,7 +4,11 @@
     <p class="hint">Stil und Formparameter</p>
   </header>
 
-  <section class="block" [class.collapsed]="isCollapsed('stroke')">
+  <section
+    class="block g-stroke"
+    [class.collapsed]="isCollapsed('stroke')"
+    [class.is-focus]="isFocusBlock('stroke')"
+  >
     <button type="button" class="block-toggle" (click)="toggle('stroke')">
       <h3>Kante</h3>
       <span class="chevron material-symbols-outlined">{{ isCollapsed('stroke') ? 'expand_more' : 'expand_less' }}</span>
@@ -90,7 +94,11 @@
     }
   </section>
 
-  <section class="block" [class.collapsed]="isCollapsed('fill')">
+  <section
+    class="block g-fill"
+    [class.collapsed]="isCollapsed('fill')"
+    [class.is-focus]="isFocusBlock('fill')"
+  >
     <button type="button" class="block-toggle" (click)="toggle('fill')">
       <h3>Füllung</h3>
       <span class="chevron material-symbols-outlined">{{ isCollapsed('fill') ? 'expand_more' : 'expand_less' }}</span>
@@ -189,13 +197,22 @@
     }
   </section>
 
-  @if (drawing.canGroup() || drawing.canUngroup()) {
-    <section class="block fade-in" [class.collapsed]="isCollapsed('group')">
+  @if (drawing.canGroup() || drawing.canUngroup() || drawing.selectedIds().length > 0) {
+    <section
+      class="block fade-in g-group"
+      [class.collapsed]="isCollapsed('group')"
+      [class.is-focus]="isFocusBlock('group')"
+    >
       <button type="button" class="block-toggle" (click)="toggle('group')">
         <h3>Gruppe</h3>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('group') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('group')) {
+        @if (drawing.selectedIds().length > 0) {
+          <button type="button" class="action-btn" (click)="drawing.duplicateSelected()">
+            Duplizieren
+          </button>
+        }
         @if (drawing.canGroup()) {
           <button type="button" class="action-btn" (click)="drawing.groupSelected()">
             Gruppieren
@@ -214,7 +231,11 @@
   }
 
   @if (selected(); as s) {
-    <section class="block fade-in" [class.collapsed]="isCollapsed('transform')">
+    <section
+      class="block fade-in g-transform"
+      [class.collapsed]="isCollapsed('transform')"
+      [class.is-focus]="isFocusBlock('transform')"
+    >
       <button type="button" class="block-toggle" (click)="toggle('transform')">
         <h3>Transform</h3>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('transform') ? 'expand_more' : 'expand_less' }}</span>
@@ -247,7 +268,11 @@
     </section>
 
     @if (s.type === 'octopus') {
-      <section class="block fade-in" [class.collapsed]="isCollapsed('octopus')">
+      <section
+        class="block fade-in g-octopus"
+        [class.collapsed]="isCollapsed('octopus')"
+        [class.is-focus]="isFocusBlock('octopus')"
+      >
         <button type="button" class="block-toggle" (click)="toggle('octopus')">
           <h3>Octopussy</h3>
           <span class="chevron material-symbols-outlined">{{ isCollapsed('octopus') ? 'expand_more' : 'expand_less' }}</span>
@@ -287,7 +312,11 @@
     }
 
     @if (s.type === 'multiStar') {
-      <section class="block fade-in" [class.collapsed]="isCollapsed('multiStar')">
+      <section
+        class="block fade-in g-multistar"
+        [class.collapsed]="isCollapsed('multiStar')"
+        [class.is-focus]="isFocusBlock('multiStar')"
+      >
         <button type="button" class="block-toggle" (click)="toggle('multiStar')">
           <h3>MultiStar</h3>
           <span class="chevron material-symbols-outlined">{{ isCollapsed('multiStar') ? 'expand_more' : 'expand_less' }}</span>
@@ -340,7 +369,11 @@
     }
 
     @if (s.type === 'randomStar') {
-      <section class="block fade-in" [class.collapsed]="isCollapsed('randomStar')">
+      <section
+        class="block fade-in g-randomstar"
+        [class.collapsed]="isCollapsed('randomStar')"
+        [class.is-focus]="isFocusBlock('randomStar')"
+      >
         <button type="button" class="block-toggle" (click)="toggle('randomStar')">
           <h3>RandomStar</h3>
           <span class="chevron material-symbols-outlined">{{ isCollapsed('randomStar') ? 'expand_more' : 'expand_less' }}</span>
@@ -370,7 +403,11 @@
     }
 
     @if (s.type === 'circleLine') {
-      <section class="block fade-in" [class.collapsed]="isCollapsed('circleLine')">
+      <section
+        class="block fade-in g-circleline"
+        [class.collapsed]="isCollapsed('circleLine')"
+        [class.is-focus]="isFocusBlock('circleLine')"
+      >
         <button type="button" class="block-toggle" (click)="toggle('circleLine')">
           <h3>CircleLine</h3>
           <span class="chevron material-symbols-outlined">{{ isCollapsed('circleLine') ? 'expand_more' : 'expand_less' }}</span>
@@ -391,7 +428,11 @@
     }
 
     @if (s.type === 'circles') {
-      <section class="block fade-in" [class.collapsed]="isCollapsed('circles')">
+      <section
+        class="block fade-in g-circles"
+        [class.collapsed]="isCollapsed('circles')"
+        [class.is-focus]="isFocusBlock('circles')"
+      >
         <button type="button" class="block-toggle" (click)="toggle('circles')">
           <h3>Circles</h3>
           <span class="chevron material-symbols-outlined">{{ isCollapsed('circles') ? 'expand_more' : 'expand_less' }}</span>
@@ -423,7 +464,11 @@
     }
 
     @if (s.type === 'sunflower') {
-      <section class="block fade-in" [class.collapsed]="isCollapsed('sunflower')">
+      <section
+        class="block fade-in g-sunflower"
+        [class.collapsed]="isCollapsed('sunflower')"
+        [class.is-focus]="isFocusBlock('sunflower')"
+      >
         <button type="button" class="block-toggle" (click)="toggle('sunflower')">
           <h3>Sonnenblume</h3>
           <span class="chevron material-symbols-outlined">{{ isCollapsed('sunflower') ? 'expand_more' : 'expand_less' }}</span>
@@ -453,75 +498,12 @@
       </section>
     }
 
-    @if (s.type === 'firework') {
-      <section class="block fade-in" [class.collapsed]="isCollapsed('firework')">
-        <button type="button" class="block-toggle" (click)="toggle('firework')">
-          <h3>Feuerwerk</h3>
-          <span class="chevron material-symbols-outlined">{{ isCollapsed('firework') ? 'expand_more' : 'expand_less' }}</span>
-        </button>
-        @if (!isCollapsed('firework')) {
-          <label class="row">
-            <span>Variante</span>
-            <select
-              [ngModel]="asFirework(s.params).variant"
-              (ngModelChange)="onFireworkVariant($event)"
-            >
-              <option value="peony">Pfingstrose</option>
-              <option value="chrysanthemum">Chrysantheme</option>
-              <option value="willow">Weide</option>
-              <option value="palm">Palme</option>
-              <option value="fountain">Fontäne</option>
-              <option value="cluster">Cluster</option>
-              <option value="ring">Ring</option>
-              <option value="crossette">Crossette</option>
-            </select>
-          </label>
-          <label class="row">
-            <span>Farbschema</span>
-            <select
-              [ngModel]="asFirework(s.params).scheme"
-              (ngModelChange)="onFireworkScheme($event)"
-            >
-              <option value="neon">Neon</option>
-              <option value="random">Random</option>
-              <option value="rainbow">Regenbogen</option>
-              <option value="pinkLilac">Pink / Rosa / Lila</option>
-              <option value="gold">Gold</option>
-              <option value="bluePink">Blau / Pink</option>
-              <option value="yellowRed">Gelb / Rot</option>
-              <option value="purpleGreen">Violett / Grün</option>
-              <option value="whiteGold">Weiß / Gold</option>
-              <option value="aquaMagenta">Aqua / Magenta</option>
-            </select>
-          </label>
-          <label class="row">
-            <span>Bursts</span>
-            <input
-              type="number"
-              min="1"
-              max="3"
-              [ngModel]="asFirework(s.params).bursts"
-              (ngModelChange)="updateParam('bursts', $event)"
-            />
-          </label>
-          <label class="row">
-            <span>Wind</span>
-            <input
-              type="range"
-              min="-1"
-              max="1"
-              step="0.05"
-              [ngModel]="asFirework(s.params).wind"
-              (ngModelChange)="updateParam('wind', $event)"
-            />
-            <em>{{ asFirework(s.params).wind | number: '1.0-2' }}</em>
-          </label>
-        }
-      </section>
-    }
-
     @if (s.type === 'rainbow') {
-      <section class="block fade-in" [class.collapsed]="isCollapsed('rainbow')">
+      <section
+        class="block fade-in g-rainbow"
+        [class.collapsed]="isCollapsed('rainbow')"
+        [class.is-focus]="isFocusBlock('rainbow')"
+      >
         <button type="button" class="block-toggle" (click)="toggle('rainbow')">
           <h3>Regenbogen</h3>
           <span class="chevron material-symbols-outlined">{{ isCollapsed('rainbow') ? 'expand_more' : 'expand_less' }}</span>
@@ -551,8 +533,12 @@
         }
       </section>
     }
-  } @else {
-    <section class="block muted" [class.collapsed]="isCollapsed('defaults')">
+  } @else if (!showFirework()) {
+    <section
+      class="block muted g-defaults"
+      [class.collapsed]="isCollapsed('defaults')"
+      [class.is-focus]="isFocusBlock('defaults')"
+    >
       <button type="button" class="block-toggle" (click)="toggle('defaults')">
         <h3>Defaults</h3>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('defaults') ? 'expand_more' : 'expand_less' }}</span>
@@ -591,7 +577,95 @@
     </section>
   }
 
-  <section class="block" [class.collapsed]="isCollapsed('layers')">
+  @if (showFirework()) {
+    <section
+      class="block fade-in g-firework"
+      [class.collapsed]="isCollapsed('firework')"
+      [class.is-focus]="isFocusBlock('firework')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('firework')">
+        <h3>Feuerwerk</h3>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('firework') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('firework')) {
+        @if (!selected()) {
+          <p class="hint">Defaults für neue Feuerwerke — sofort wirksam beim Zeichnen.</p>
+        }
+        <label class="row">
+          <span>Variante</span>
+          <select
+            [ngModel]="fwParams().variant"
+            (ngModelChange)="onFireworkVariant($event)"
+          >
+            <option value="peony">Pfingstrose</option>
+            <option value="chrysanthemum">Chrysantheme</option>
+            <option value="willow">Weide</option>
+            <option value="palm">Palme</option>
+            <option value="fountain">Fontäne</option>
+            <option value="cluster">Cluster</option>
+            <option value="ring">Ring</option>
+            <option value="crossette">Crossette</option>
+          </select>
+        </label>
+        <label class="row">
+          <span>Farbschema</span>
+          <select
+            [ngModel]="fwParams().scheme"
+            (ngModelChange)="onFireworkScheme($event)"
+          >
+            <option value="neon">Neon</option>
+            <option value="random">Random</option>
+            <option value="rainbow">Regenbogen</option>
+            <option value="pinkLilac">Pink / Rosa / Lila</option>
+            <option value="gold">Gold</option>
+            <option value="bluePink">Blau / Pink</option>
+            <option value="yellowRed">Gelb / Rot</option>
+            <option value="purpleGreen">Violett / Grün</option>
+            <option value="whiteGold">Weiß / Gold</option>
+            <option value="aquaMagenta">Aqua / Magenta</option>
+          </select>
+        </label>
+        <label class="row">
+          <span>Leuchtspuren</span>
+          <input
+            type="range"
+            [min]="fwTrailLimits().min"
+            [max]="fwTrailLimits().max"
+            step="1"
+            [ngModel]="fwParams().trails"
+            (ngModelChange)="onFireworkTrails($event)"
+          />
+          <em>{{ fwParams().trails }}</em>
+        </label>
+        <label class="row">
+          <span>Wind</span>
+          <input
+            type="range"
+            min="-1"
+            max="1"
+            step="0.05"
+            [ngModel]="fwParams().wind"
+            (ngModelChange)="onFireworkWind($event)"
+          />
+          <em>{{ fwParams().wind | number: '1.0-2' }}</em>
+        </label>
+        <label class="row check">
+          <span>Punktspuren</span>
+          <input
+            type="checkbox"
+            [ngModel]="!!fwParams().dotTrails"
+            (ngModelChange)="onFireworkDotTrails($event)"
+          />
+        </label>
+      }
+    </section>
+  }
+
+  <section
+    class="block g-layers"
+    [class.collapsed]="isCollapsed('layers')"
+    [class.is-focus]="isFocusBlock('layers')"
+  >
     <button type="button" class="block-toggle" (click)="toggle('layers')">
       <h3>Ebenen</h3>
       <span class="chevron material-symbols-outlined">{{ isCollapsed('layers') ? 'expand_more' : 'expand_less' }}</span>

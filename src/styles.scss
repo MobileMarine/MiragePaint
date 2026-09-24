@@ -2,40 +2,43 @@
   --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
   --font-ui: 'IBM Plex Sans', 'Segoe UI', sans-serif;
 
-  --bg: #ebe6de;
-  --panel: #f7f3ec;
-  --panel-soft: #efe9df;
-  --panel-hover: #e4ddd2;
-  --line: #d2cbc0;
-  --ink: #241f1a;
-  --ink-muted: #6d645a;
-  --accent: #2a6f7a;
-  --accent-soft: rgba(42, 111, 122, 0.14);
+  /* Superschaf / SoundSmash: quietschiges Pink–Lila */
+  --bg: #f6e8f4;
+  --panel: #fcf4fa;
+  --panel-soft: #f5e6f2;
+  --panel-hover: #edd8ea;
+  --line: #e0c4da;
+  --ink: #2a1a28;
+  --ink-muted: #7a5f74;
+  --accent: #ff2d9b;
+  --accent-2: #b44dff;
+  --accent-soft: rgba(255, 45, 155, 0.16);
   --input-bg: #ffffff;
-  --scroll-thumb: #c4bbb0;
-  --canvas-0: #e8e2d8;
-  --canvas-1: #d9d2c6;
-  --grid-dot: #c4bbb0;
-  --layer-active: color-mix(in srgb, var(--accent) 12%, #fff);
+  --scroll-thumb: #d4a8c8;
+  --canvas-0: #f0e4ee;
+  --canvas-1: #e4d4e2;
+  --grid-dot: #d4b8ce;
+  --layer-active: color-mix(in srgb, var(--accent) 14%, #fff);
 }
 
 html.dark {
-  --bg: #121416;
-  --panel: #1a1d21;
-  --panel-soft: #22262b;
-  --panel-hover: #2a2f36;
-  --line: #3a4048;
-  --ink: #e8eaed;
-  --ink-muted: #9aa3ad;
-  --accent: #3d9aaa;
-  --accent-soft: rgba(61, 154, 170, 0.22);
-  --input-bg: #16191d;
-  --scroll-thumb: #4a525c;
+  --bg: #161218;
+  --panel: #1e1a22;
+  --panel-soft: #28222c;
+  --panel-hover: #322a38;
+  --line: #4a3a48;
+  --ink: #f2e8f0;
+  --ink-muted: #b0a0ae;
+  --accent: #ff4db8;
+  --accent-2: #c77dff;
+  --accent-soft: rgba(255, 77, 184, 0.24);
+  --input-bg: #18141c;
+  --scroll-thumb: #5a4a58;
   /* Anthrazit / fast schwarz — ideal für Feuerwerk */
   --canvas-0: #1a1c1e;
   --canvas-1: #0e1012;
   --grid-dot: #2e3338;
-  --layer-active: color-mix(in srgb, var(--accent) 22%, #1a1d21);
+  --layer-active: color-mix(in srgb, var(--accent) 24%, #1e1a22);
 }
 
 *,

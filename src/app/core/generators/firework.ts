@@ -70,6 +70,16 @@ interface VariantConfig {
   speed: number;
 }
 
+/** Suggested trail-count range for a variant (~1× … 5× base rays). */
+export function fireworkTrailLimits(variant: FireworkVariant): {
+  min: number;
+  max: number;
+  def: number;
+} {
+  const cfg = variantConfig(variant);
+  return { min: 8, max: Math.round(cfg.rays * 5), def: cfg.rays };
+}
+
 function variantConfig(v: FireworkVariant): VariantConfig {
   switch (v) {
     case 'peony':
@@ -210,18 +220,29 @@ function samplePos(
 /**
  * Evaluate firework at animation progress t (0..1). Peak freeze = t=1.
  * Local coords: burst/fountain origin at (0,0); SVG +y is down.
+ * Particle list is progress-independent (stable RNG); trails grow from origin.
  */
 export function evaluateFirework(params: FireworkParams, t = 1): FireworkFrame {
   const progress = easeOutCubic(Math.min(1, Math.max(0, t)));
-  const rng = createRng(params.seed);
   const cfg = variantConfig(params.variant);
   const { colors, trail } = pickFireworkColors(params.scheme, params.seed);
   const radius = Math.max(20, params.radius);
   const wind = Math.max(-1, Math.min(1, params.wind));
-  const bursts = Math.max(1, Math.min(3, Math.floor(params.bursts)));
   const isFountain = cfg.fountain > 0.5;
+  const useDotTrails = !!params.dotTrails;
 
-  // Flight time scale so tip ~radius at peak without gravity
+  // Trails replace bursts: ~1× variant rays as default, up to ~5× as max density
+  const baseRays = cfg.rays;
+  const maxTrails = Math.round(baseRays * 5);
+  const legacyBursts = params.bursts != null ? Math.max(1, Math.min(5, Math.floor(params.bursts))) : null;
+  const trailsRaw =
+    params.trails != null
+      ? params.trails
+      : legacyBursts != null
+        ? legacyBursts * baseRays
+        : baseRays;
+  const nTrails = Math.max(8, Math.min(maxTrails, Math.round(trailsRaw)));
+
   const flightT = 1;
   const speedBase = radius * cfg.speed;
   const gravity = cfg.gravity * radius * 1.8;
@@ -256,139 +277,147 @@ export function evaluateFirework(params: FireworkParams, t = 1): FireworkFrame {
     }
   }
 
-  const burstCount = isFountain ? 1 : bursts;
-  for (let b = 0; b < burstCount; b++) {
-    const burstRng = createRng(params.seed + b * 9973 + 17);
-    const bx = isFountain ? 0 : (burstRng() - 0.5) * radius * 0.2 * (bursts > 1 ? 1 : 0);
-    const by = isFountain ? 0 : (burstRng() - 0.5) * radius * 0.16 * (bursts > 1 ? 1 : 0);
-    const nRays = Math.round(cfg.rays * (0.8 + burstRng() * 0.45));
+  // Single central burst — all primary rays share one origin
+  const burstRng = createRng(params.seed + 17);
+  const bx = 0;
+  const by = 0;
+  const allowCluster =
+    params.variant === 'cluster' || params.variant === 'crossette';
 
-    for (let i = 0; i < nRays; i++) {
-      let angleDeg: number;
-      let speed: number;
+  for (let i = 0; i < nTrails; i++) {
+    let angleDeg: number;
+    let speed: number;
 
-      if (isFountain) {
-        // Upward cone: −90° is up in SVG; spread ±28°
-        const spread = 28 + burstRng() * 14;
-        angleDeg = -90 + (burstRng() * 2 - 1) * spread;
-        speed = speedBase * (0.55 + burstRng() * 0.7);
-      } else {
-        angleDeg = (i / nRays) * 360 + burstRng() * 14;
-        let distFactor = 0.72 + burstRng() * 0.4;
-        if (cfg.ringBias > 0.5) distFactor = 0.9 + burstRng() * 0.1;
-        speed = speedBase * distFactor;
+    if (isFountain) {
+      const spread = 28 + burstRng() * 14;
+      angleDeg = -90 + (burstRng() * 2 - 1) * spread;
+      speed = speedBase * (0.55 + burstRng() * 0.7);
+    } else {
+      angleDeg = (i / nTrails) * 360 + burstRng() * 14;
+      let distFactor = 0.72 + burstRng() * 0.4;
+      if (cfg.ringBias > 0.5) distFactor = 0.9 + burstRng() * 0.1;
+      speed = speedBase * distFactor;
+    }
+
+    const rad = (angleDeg * Math.PI) / 180;
+    const vx = Math.cos(rad) * speed;
+    const vy = Math.sin(rad) * speed;
+    const col = colors[Math.floor(burstRng() * colors.length)];
+    const phos = mixHex(col, '#ffffff', 0.55 + burstRng() * 0.35);
+    // Always consume RNG so toggling dotTrails does not reshuffle particles
+    const sparkTrail = burstRng() < cfg.sparkTrailChance;
+    // Tiny origin jitter still consumes RNG for stream stability, but keep
+    // primaries visually locked to the burst center (physical peony look).
+    burstRng();
+    burstRng();
+
+    particles.push({
+      x0: bx,
+      y0: by,
+      vx,
+      vy,
+      color: col,
+      phosphor: phos,
+      sparkTrail,
+      born: 0,
+    });
+
+    // Crossette / cluster only: secondary burst mid-flight (intentional split)
+    if (allowCluster && !isFountain && burstRng() < cfg.clusterChance) {
+      const midU = 0.45 + burstRng() * 0.25;
+      const mid = samplePos(
+        { x0: bx, y0: by, vx, vy, color: col, phosphor: phos, sparkTrail: false, born: 0 },
+        midU * flightT,
+        gravity,
+        windAccel,
+      );
+      const subN = params.variant === 'crossette' ? 4 : 3 + Math.floor(burstRng() * 3);
+      for (let s = 0; s < subN; s++) {
+        const sa = (s / subN) * 360 + burstRng() * 50;
+        const sr = (sa * Math.PI) / 180;
+        const ss = speedBase * (0.18 + burstRng() * 0.2);
+        const sc = colors[Math.floor(burstRng() * colors.length)];
+        particles.push({
+          x0: mid.x,
+          y0: mid.y,
+          vx: Math.cos(sr) * ss,
+          vy: Math.sin(sr) * ss,
+          color: sc,
+          phosphor: mixHex(sc, '#ffffff', 0.5),
+          sparkTrail: burstRng() < 0.4,
+          born: midU,
+        });
       }
-
-      const rad = (angleDeg * Math.PI) / 180;
-      const vx = Math.cos(rad) * speed;
-      const vy = Math.sin(rad) * speed;
-      const col = colors[Math.floor(burstRng() * colors.length)];
-      const phos = mixHex(col, '#ffffff', 0.55 + burstRng() * 0.35);
-
-      particles.push({
-        x0: bx + (burstRng() - 0.5) * 3,
-        y0: by + (isFountain ? burstRng() * 4 : (burstRng() - 0.5) * 3),
-        vx,
-        vy,
-        color: col,
-        phosphor: phos,
-        sparkTrail: burstRng() < cfg.sparkTrailChance,
-        born: 0,
-      });
-
-      // Crossette / cluster: secondary burst near mid-flight tip
-      if (!isFountain && burstRng() < cfg.clusterChance * progress) {
-        const midU = 0.45 + burstRng() * 0.25;
-        const mid = samplePos(
-          { x0: bx, y0: by, vx, vy, color: col, phosphor: phos, sparkTrail: false, born: 0 },
-          midU * flightT,
-          gravity,
-          windAccel,
-        );
-        const subN = params.variant === 'crossette' ? 4 : 3 + Math.floor(burstRng() * 3);
-        for (let s = 0; s < subN; s++) {
-          const sa = (s / subN) * 360 + burstRng() * 50;
-          const sr = ((sa * Math.PI) / 180);
-          const ss = speedBase * (0.18 + burstRng() * 0.2);
-          const sc = colors[Math.floor(burstRng() * colors.length)];
-          particles.push({
-            x0: mid.x,
-            y0: mid.y,
-            vx: Math.cos(sr) * ss,
-            vy: Math.sin(sr) * ss,
-            color: sc,
-            phosphor: mixHex(sc, '#ffffff', 0.5),
-            sparkTrail: burstRng() < 0.4,
-            born: midU,
-          });
-        }
-      }
+    } else if (!allowCluster && !isFountain) {
+      // Keep RNG stream length stable if cluster chance roll existed historically:
+      // no-op — stream differs by variant only, which is fine.
     }
   }
 
   const samples = 16;
-  for (const p of particles) {
+  for (let pi = 0; pi < particles.length; pi++) {
+    const p = particles[pi];
     const lifeStart = p.born;
     const lifeEnd = progress;
     if (lifeEnd <= lifeStart + 0.02) continue;
 
     const localProg = (lifeEnd - lifeStart) / Math.max(1e-6, 1 - lifeStart);
-    const trailStart = Math.max(lifeStart, lifeEnd - cfg.trailKeep * (lifeEnd - lifeStart));
+    const trailLen = lifeEnd - lifeStart;
 
     const pts: { x: number; y: number; u: number }[] = [];
     for (let i = 0; i <= samples; i++) {
       const f = i / samples;
-      const u = lerp(trailStart, lifeEnd, f);
+      const u = lerp(lifeStart, lifeEnd, f);
       const pos = samplePos(p, u * flightT, gravity, windAccel);
       pts.push({ x: pos.x, y: pos.y, u: f });
     }
 
-    // Continuous luminous trail with age fade + mid phosphor
-    for (let i = 0; i < pts.length - 1; i++) {
-      const a = pts[i];
-      const b = pts[i + 1];
-      const midU = (a.u + b.u) / 2;
-      // Older (near trail start / center) more transparent; tip brighter
-      const ageOp = Math.pow(midU, 1.15) * (0.35 + 0.65 * localProg);
-      // Phosphor peak near mid-path
-      const phosGate = Math.exp(-Math.pow((midU - 0.48) / 0.22, 2));
-      const width = (0.7 + midU * 1.5) * (1 + cfg.phosphor * phosGate * 1.8);
-      const color = mixHex(p.color, p.phosphor, cfg.phosphor * phosGate * 0.85);
-      streaks.push({
-        x1: a.x,
-        y1: a.y,
-        x2: b.x,
-        y2: b.y,
-        color,
-        width,
-        opacity: Math.min(1, ageOp * (0.55 + cfg.phosphor * 0.35)),
-      });
-    }
+    const drawDots = useDotTrails && p.sparkTrail;
+    const particleRng = createRng((params.seed + pi * 7919 + 31) >>> 0);
 
-    // Tip spark
-    const tip = pts[pts.length - 1];
-    sparks.push({
-      x: tip.x,
-      y: tip.y,
-      r: 1.1 + rng() * 2.2,
-      color: mixHex(p.color, '#ffffff', 0.4),
-      opacity: Math.min(1, 0.55 + localProg * 0.45),
-    });
-
-    // Irregular glowing dots along parabolic path
-    if (p.sparkTrail && localProg > 0.15) {
-      let u = trailStart + rng() * 0.08 * (lifeEnd - trailStart);
-      while (u < lifeEnd - 0.04) {
-        const pos = samplePos(p, u * flightT, gravity, windAccel);
-        const along = (u - trailStart) / Math.max(1e-6, lifeEnd - trailStart);
-        sparks.push({
-          x: pos.x + (rng() - 0.5) * 1.2,
-          y: pos.y + (rng() - 0.5) * 1.2,
-          r: 0.55 + rng() * 1.4,
-          color: mixHex(p.phosphor, '#ffffff', rng() * 0.5),
-          opacity: Math.min(1, Math.pow(along, 0.9) * (0.4 + rng() * 0.55)),
+    if (drawDots) {
+      // Irregular glowing dots along path — only when Punktspuren is on
+      if (localProg > 0.15) {
+        let u = lifeStart + particleRng() * 0.08 * trailLen;
+        while (u < lifeEnd - 0.04) {
+          const pos = samplePos(p, u * flightT, gravity, windAccel);
+          const along = (u - lifeStart) / Math.max(1e-6, trailLen);
+          const keepFade =
+            cfg.trailKeep >= 1 ? 1 : Math.min(1, along / Math.max(0.15, 1 - cfg.trailKeep * 0.85));
+          sparks.push({
+            x: pos.x + (particleRng() - 0.5) * 1.2,
+            y: pos.y + (particleRng() - 0.5) * 1.2,
+            r: 0.55 + particleRng() * 1.4,
+            color: mixHex(p.phosphor, '#ffffff', particleRng() * 0.5),
+            opacity: Math.min(1, Math.pow(along, 0.9) * keepFade * (0.4 + particleRng() * 0.55)),
+          });
+          u += (0.04 + particleRng() * 0.12) * trailLen;
+        }
+      }
+    } else {
+      // Continuous luminous trail from burst origin; no tip/dot sparks
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i];
+        const b = pts[i + 1];
+        const midU = (a.u + b.u) / 2;
+        // Keep origin visible (parabolic connection to center); soft trailKeep fade
+        const keepFade =
+          cfg.trailKeep >= 1
+            ? 1
+            : 0.35 + 0.65 * Math.min(1, midU / Math.max(0.2, 1 - cfg.trailKeep));
+        const ageOp = (0.22 + 0.78 * midU) * keepFade * (0.4 + 0.6 * localProg);
+        const phosGate = Math.exp(-Math.pow((midU - 0.48) / 0.22, 2));
+        const width = (0.7 + midU * 1.5) * (1 + cfg.phosphor * phosGate * 1.8);
+        const color = mixHex(p.color, p.phosphor, cfg.phosphor * phosGate * 0.85);
+        streaks.push({
+          x1: a.x,
+          y1: a.y,
+          x2: b.x,
+          y2: b.y,
+          color,
+          width,
+          opacity: Math.min(1, ageOp * (0.55 + cfg.phosphor * 0.35)),
         });
-        u += (0.04 + rng() * 0.12) * (lifeEnd - trailStart);
       }
     }
   }

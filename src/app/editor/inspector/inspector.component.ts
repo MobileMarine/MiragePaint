@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DrawingService } from '../../core/services/drawing.service';
+import { fireworkTrailLimits } from '../../core/generators/firework';
 import {
   CirclesParams,
   CircleLineParams,
@@ -15,11 +16,25 @@ import {
   RainbowParams,
   RandomStarParams,
   Shape,
+  ShapeType,
   StrokeMode,
   SunflowerParams,
+  ToolId,
 } from '../../core/models/shape';
 import { COLOR_PRESETS, RAINBOW_COLORS } from '../../core/style/presets';
 import { FIREWORK_NEON_POOL, pickFillStops } from '../../core/style/firework-palettes';
+
+/** Tools that expose type-specific inspector params before/after placing. */
+const PARAM_TOOLS = new Set<ToolId>([
+  'octopus',
+  'multiStar',
+  'randomStar',
+  'circleLine',
+  'circles',
+  'sunflower',
+  'firework',
+  'rainbow',
+]);
 
 const TYPE_LABELS: Record<string, string> = {
   freehand: 'Freihand',
@@ -59,6 +74,52 @@ export class InspectorComponent {
   readonly presets = COLOR_PRESETS;
 
   readonly selected = computed(() => this.drawing.selectedShape());
+
+  /** Selected shape type, or active draw tool when it has params. */
+  readonly focusType = computed<ShapeType | ToolId | null>(() => {
+    const s = this.selected();
+    if (s) return s.type;
+    const tool = this.drawing.tool();
+    return PARAM_TOOLS.has(tool) ? tool : null;
+  });
+
+  readonly showFirework = computed(
+    () => this.selected()?.type === 'firework' || this.drawing.tool() === 'firework',
+  );
+
+  readonly fwParams = computed((): FireworkParams => {
+    const s = this.selected();
+    if (s?.type === 'firework') {
+      const p = s.params as FireworkParams;
+      const limits = fireworkTrailLimits(p.variant);
+      const trails =
+        p.trails ??
+        (p.bursts != null ? Math.round(p.bursts * limits.def) : limits.def);
+      return { ...p, trails, dotTrails: p.dotTrails ?? false };
+    }
+    const ep = this.drawing.effectParams().firework;
+    return {
+      seed: 0,
+      radius: 40,
+      wind: ep.wind ?? 0,
+      variant: ep.variant,
+      scheme: ep.scheme,
+      trails: ep.trails ?? fireworkTrailLimits(ep.variant).def,
+      dotTrails: ep.dotTrails ?? false,
+    };
+  });
+
+  readonly fwTrailLimits = computed(() =>
+    fireworkTrailLimits(this.fwParams().variant),
+  );
+
+  /** Whether this inspector block matches the active tool/selection. */
+  isFocusBlock(id: string): boolean {
+    const focus = this.focusType();
+    if (!focus) return false;
+    if (id === 'transform') return !!this.selected();
+    return id === focus;
+  }
 
   /**
    * Neon/Random need a fill surface. Hide for stroke-only tools/shapes
@@ -354,18 +415,35 @@ export class InspectorComponent {
       | 'firework'
       | 'rainbow',
     key: string,
-    value: string | number,
+    value: string | number | boolean,
   ): void {
     const coerced =
       (group === 'rainbow' && key === 'mode') ||
-      (group === 'firework' && (key === 'variant' || key === 'scheme'))
+      (group === 'firework' &&
+        (key === 'variant' || key === 'scheme' || key === 'dotTrails'))
         ? value
-        : typeof value === 'number'
+        : typeof value === 'number' || typeof value === 'boolean'
           ? value
           : Number(value);
     this.drawing.effectParams.update((ep) => ({
       ...ep,
       [group]: { ...ep[group], [key]: coerced },
+    }));
+  }
+
+  /** Patch firework on selection (if any) and always sync effect defaults. */
+  patchFirework(
+    partial: Partial<
+      Pick<FireworkParams, 'variant' | 'scheme' | 'trails' | 'dotTrails' | 'wind'>
+    >,
+  ): void {
+    const s = this.selected();
+    if (s?.type === 'firework') {
+      this.drawing.updateSelectedParams(partial);
+    }
+    this.drawing.effectParams.update((ep) => ({
+      ...ep,
+      firework: { ...ep.firework, ...partial },
     }));
   }
 
@@ -403,18 +481,26 @@ export class InspectorComponent {
   }
 
   onFireworkVariant(v: FireworkVariant): void {
-    this.drawing.updateSelectedParams({ variant: v });
-    this.drawing.effectParams.update((ep) => ({
-      ...ep,
-      firework: { ...ep.firework, variant: v },
-    }));
+    const limits = fireworkTrailLimits(v);
+    const trails = Math.min(this.fwParams().trails ?? limits.def, limits.max);
+    this.patchFirework({ variant: v, trails: Math.max(limits.min, trails) });
   }
 
   onFireworkScheme(v: FireworkScheme): void {
-    this.drawing.updateSelectedParams({ scheme: v });
-    this.drawing.effectParams.update((ep) => ({
-      ...ep,
-      firework: { ...ep.firework, scheme: v },
-    }));
+    this.patchFirework({ scheme: v });
+  }
+
+  onFireworkDotTrails(v: boolean): void {
+    this.patchFirework({ dotTrails: !!v });
+  }
+
+  onFireworkTrails(v: string | number): void {
+    const limits = this.fwTrailLimits();
+    const n = Math.max(limits.min, Math.min(limits.max, Math.round(Number(v))));
+    this.patchFirework({ trails: n });
+  }
+
+  onFireworkWind(v: string | number): void {
+    this.patchFirework({ wind: Number(v) });
   }
 }

@@ -213,7 +213,12 @@ export interface FireworkParams {
   wind: number;
   variant: FireworkVariant;
   scheme: FireworkScheme;
-  bursts: number;
+  /** Number of luminous trails (rays). Replaces bursts. */
+  trails?: number;
+  /** When true, some particles use irregular dot trails instead of solid streaks. */
+  dotTrails?: boolean;
+  /** @deprecated Prefer `trails`; older documents may still carry this. */
+  bursts?: number;
   /** @deprecated Unused — kept for older documents */
   smoke?: number;
   /** @deprecated Unused — kept for older documents */

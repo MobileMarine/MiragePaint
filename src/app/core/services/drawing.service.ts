@@ -61,8 +61,10 @@ const EFFECT_DEFAULTS = {
   sunflower: { petals: 18, seedRings: 4 },
   firework: {
     variant: 'chrysanthemum' as FireworkVariant,
-    bursts: 1,
+    trails: 72,
     scheme: 'neon' as FireworkScheme,
+    dotTrails: false,
+    wind: 0,
   },
   rainbow: { mode: 'gradient' as const },
 };
@@ -406,6 +408,25 @@ export class DrawingService {
     this.pushSnapshot();
   }
 
+  /** Clone selection with a small offset; selects the clones. */
+  duplicateSelected(): void {
+    const selected = this.selectedShapes();
+    if (!selected.length) return;
+    const offset = 24;
+    const clones = selected.map((s) => ({
+      ...structuredClone(s),
+      id: newShapeId(),
+      transform: {
+        ...s.transform,
+        x: s.transform.x + offset,
+        y: s.transform.y + offset,
+      },
+    }));
+    this.shapes.update((list) => [...list, ...clones]);
+    this.selectedIds.set(clones.map((c) => c.id));
+    this.pushSnapshot();
+  }
+
   groupSelected(): void {
     const selected = this.selectedShapes();
     if (selected.length < 2) return;
@@ -610,10 +631,11 @@ export class DrawingService {
         params: {
           seed: (Math.random() * 0xffffffff) >>> 0,
           radius: 40,
-          wind: 0,
+          wind: ep.wind ?? 0,
           variant: ep.variant,
           scheme,
-          bursts: ep.bursts,
+          trails: ep.trails ?? 72,
+          dotTrails: ep.dotTrails ?? false,
           animT: 0,
         } satisfies FireworkParams,
       });

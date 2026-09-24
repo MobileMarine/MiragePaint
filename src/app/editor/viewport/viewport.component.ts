@@ -301,6 +301,10 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
       ev.preventDefault();
       this.drawing.redo();
     }
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'd') {
+      ev.preventDefault();
+      this.drawing.duplicateSelected();
+    }
     if (ev.key === 'Delete' || ev.key === 'Backspace') {
       const tag = (ev.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;

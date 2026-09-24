@@ -26,8 +26,8 @@
   place-items: center;
   margin-bottom: 0.35rem;
   border-radius: 0.55rem;
-  background: linear-gradient(145deg, #2a6f7a, #1d4f57);
-  color: #f4efe6;
+  background: linear-gradient(145deg, var(--accent), var(--accent-2));
+  color: #fff8fc;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 1.1rem;
@@ -80,6 +80,7 @@
   background: var(--accent-soft);
   color: var(--accent);
   transform: scale(1.06);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 .tool .material-symbols-outlined {

@@ -43,6 +43,157 @@ header h2 {
   padding: 0.7rem 0.65rem;
   border-radius: 0.65rem;
   background: var(--panel-soft);
+  border: 1.5px solid transparent;
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+/* Fixed pastel group colors — warm→cool spectrum (UI order). Sync: .cursor/rules/inspector-pastel-groups.mdc */
+.block.g-stroke {
+  background: #fce4ec; /* rose */
+}
+.block.g-fill {
+  background: #fde0d4; /* peach */
+}
+.block.g-group {
+  background: #ffe8cc; /* apricot */
+}
+.block.g-transform {
+  background: #ffefc2; /* soft gold */
+}
+.block.g-octopus {
+  background: #fff3bf; /* warm yellow */
+}
+.block.g-multistar {
+  background: #fef9c8; /* butter */
+}
+.block.g-randomstar {
+  background: #f5f0d0; /* cream-gold */
+}
+.block.g-circleline {
+  background: #e0f5f4; /* mint-aqua */
+}
+.block.g-circles {
+  background: #dceefb; /* sky */
+}
+.block.g-sunflower {
+  background: #ffe9b5; /* sunflower gold */
+}
+.block.g-firework {
+  background: #fad4e8; /* rose-magenta */
+}
+.block.g-rainbow {
+  background: #ebe0fa; /* lilac */
+}
+.block.g-defaults {
+  background: #f5efe6; /* warm cream */
+}
+.block.g-layers {
+  background: #e4f2fb; /* powder blue */
+}
+
+/* Dark: same hue order, soft luminous tints — no muddy green/navy */
+:host-context(html.dark) .block.g-stroke {
+  background: color-mix(in srgb, #f48fb1 34%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-fill {
+  background: color-mix(in srgb, #ffab91 34%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-group {
+  background: color-mix(in srgb, #ffb74d 34%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-transform {
+  background: color-mix(in srgb, #ffd54f 34%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-octopus {
+  background: color-mix(in srgb, #fff176 32%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-multistar {
+  background: color-mix(in srgb, #fff59d 30%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-randomstar {
+  background: color-mix(in srgb, #ffe082 30%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-circleline {
+  background: color-mix(in srgb, #80cbc4 32%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-circles {
+  background: color-mix(in srgb, #81d4fa 32%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-sunflower {
+  background: color-mix(in srgb, #ffcc80 34%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-firework {
+  background: color-mix(in srgb, #f48fb1 36%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-rainbow {
+  background: color-mix(in srgb, #ce93d8 34%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-defaults {
+  background: color-mix(in srgb, #d7ccc8 26%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-layers {
+  background: color-mix(in srgb, #90caf9 32%, var(--panel-soft));
+}
+
+/*
+ * Contrast on pastel panels: dark ink on light backgrounds, light ink on dark.
+ * Nested surfaces (--input-bg: layer rows, inputs, buttons) keep theme --ink.
+ */
+.block[class*='g-'] {
+  --block-ink: #1a1220;
+  --block-ink-muted: #3a3048;
+  color: var(--block-ink);
+
+  &.muted {
+    color: var(--block-ink-muted);
+  }
+
+  .block-toggle,
+  .row {
+    color: var(--block-ink);
+  }
+
+  .block-toggle h3,
+  .block h3,
+  .chevron,
+  .hint,
+  .row em {
+    color: var(--block-ink-muted);
+  }
+
+  .layer-item,
+  .action-btn,
+  .ghost,
+  .row input[type='number'],
+  .row select {
+    color: var(--ink);
+  }
+
+  .drag-handle,
+  .layer-id,
+  .layer-empty {
+    color: var(--ink-muted);
+  }
+}
+
+:host-context(html.dark) .block[class*='g-'] {
+  --block-ink: #f7f0f6;
+  --block-ink-muted: #d4c6d2;
+  color: var(--block-ink);
+
+  &.muted {
+    color: var(--block-ink-muted);
+  }
+}
+
+.block.is-focus {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 4px 14px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .block.muted {

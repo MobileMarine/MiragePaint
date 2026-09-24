@@ -1,0 +1,62 @@
+---
+description: Inspector-Einstellungsgruppen mit festen Pastellfarben
+globs: src/app/editor/inspector/**
+alwaysApply: false
+---
+
+# Inspector: Pastellfarben pro Einstellungsgruppe
+
+Jede Inspector-Sektion (`.block`) hat eine **feste Pastellfarbe** als Hintergrund. Neue Kategorien müssen eine eigene Klasse und Farbe bekommen — keine Wiederverwendung von `var(--panel-soft)` allein.
+
+## Spektrum-Ordnung
+
+Farben folgen der **UI-Reihenfolge oben→unten** als freundliches Spektrum:
+
+**Rose → Peach → Apricot → Gold → Gelb → Cream → Mint/Aqua → Sky → Gold (Sunflower) → Rosa-Magenta → Lilac → Cream → Powder Blue**
+
+Keine matten Dunkelgrün-/Dunkelblau-Töne. Bevorzuge Gelb, Orange, Rose, Hellblau, Gold, Lilac.
+
+Neue Gruppen: Hue an die **Nachbar-Sektionen** anschließen (nicht zufällig springen).
+
+## Pflicht bei neuen Gruppen
+
+1. HTML: `class="block g-<id>"` (z. B. `g-stroke`, `g-firework`).
+2. SCSS in `inspector.component.scss`: Light-Pastell **und** Dark-Variante (`:host-context(html.dark) .block.g-<id>`).
+3. Optional Focus: `[class.is-focus]="isFocusBlock('<id>')"` wenn die Sektion zum aktiven Tool/Shape gehört.
+4. Diese Tabelle um die neue Gruppe erweitern (Hue zur Spektrum-Position wählen).
+
+## Feste Zuordnung
+
+| Klasse | Gruppe | Light-Pastell | Charakter |
+|--------|--------|---------------|-----------|
+| `g-stroke` | Kante | `#fce4ec` | Rose |
+| `g-fill` | Füllung | `#fde0d4` | Peach |
+| `g-group` | Gruppe / Duplizieren | `#ffe8cc` | Apricot |
+| `g-transform` | Transform | `#ffefc2` | Soft Gold |
+| `g-octopus` | Octopus | `#fff3bf` | Warm Yellow |
+| `g-multistar` | MultiStar | `#fef9c8` | Butter |
+| `g-randomstar` | RandomStar | `#f5f0d0` | Cream-Gold |
+| `g-circleline` | CircleLine | `#e0f5f4` | Mint-Aqua |
+| `g-circles` | Circles | `#dceefb` | Sky |
+| `g-sunflower` | Sonnenblume | `#ffe9b5` | Sunflower Gold |
+| `g-firework` | Feuerwerk | `#fad4e8` | Rose-Magenta |
+| `g-rainbow` | Regenbogen | `#ebe0fa` | Lilac |
+| `g-defaults` | Defaults | `#f5efe6` | Warm Cream |
+| `g-layers` | Ebenen | `#e4f2fb` | Powder Blue |
+
+Dark mode: `:host-context(html.dark)` + `color-mix` mit warmen/hellen Tints (Pink, Peach, Gold, Sky …) und `var(--panel-soft)` — keine matten Grün-/Navy-Mixes.
+
+## Kontrast (Pflicht)
+
+Pastell-Panels nutzen lokale Textfarben (nicht blind `--ink` / `--ink-muted`):
+
+- **Heller Hintergrund** (Light-Pastell): dunkler Text (`--block-ink` / `--block-ink-muted`)
+- **Dunkler Hintergrund** (`:host-context(html.dark)`): heller Text
+
+Elemente auf eigener Fläche (`--input-bg`: Ebenen-Zeilen, Inputs, Buttons) behalten Theme-`--ink` / `--ink-muted`.
+
+In `inspector.component.scss` über `.block[class*='g-']` gesetzt. Neue Gruppen müssen darunter fallen (Klassenpräfix `g-`) oder dieselben Variablen setzen.
+
+## Fokus-Hervorhebung
+
+Aktives Tool (Toolbar links) bzw. ausgewählte Form → passende Inspector-Sektion mit `.is-focus` (Accent-Border). Toolbar `.tool.active` und Inspector `.is-focus` gehören zusammen.
