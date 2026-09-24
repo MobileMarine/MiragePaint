@@ -1,7 +1,33 @@
 <svg:g [attr.transform]="tAttr" [class.selected]="selected">
-  <svg:g [attr.opacity]="shape.style.opacity ?? 1">
-  @if (needsFillDef || needsStrokeDef) {
+  <svg:g [attr.opacity]="shape.style.opacity ?? 1" [attr.filter]="strokeFilterAttr">
+  @if (needsFillDef || needsStrokeDef || needsGlowFilter) {
     <svg:defs>
+      @if (needsGlowFilter) {
+        <svg:filter
+          [attr.id]="glowFilterId"
+          x="-50%"
+          y="-50%"
+          width="200%"
+          height="200%"
+          color-interpolation-filters="sRGB"
+        >
+          <svg:feGaussianBlur
+            in="SourceGraphic"
+            [attr.stdDeviation]="(shape.style.strokeGlow?.width ?? 8) / 3"
+            result="blur"
+          />
+          <svg:feFlood
+            [attr.flood-color]="shape.style.strokeGlow?.color ?? '#fff'"
+            [attr.flood-opacity]="shape.style.strokeGlow?.opacity ?? 0.55"
+            result="color"
+          />
+          <svg:feComposite in="color" in2="blur" operator="in" result="glow" />
+          <svg:feMerge>
+            <svg:feMergeNode in="glow" />
+            <svg:feMergeNode in="SourceGraphic" />
+          </svg:feMerge>
+        </svg:filter>
+      }
       @if (needsFillDef) {
         <svg:linearGradient
           [attr.id]="'fill-' + shape.id"
@@ -10,44 +36,50 @@
           [attr.x2]="fillGradCoords.x2"
           [attr.y2]="fillGradCoords.y2"
         >
-          @if (shape.style.fillMode === 'rainbowGradient' || shape.style.fillMode === 'rainbowStripes') {
-            @for (s of rainbowStops; track $index) {
-              <svg:stop [attr.offset]="s.offset" [attr.stop-color]="s.color" />
-            }
-          } @else if (shape.style.fillMode === 'neon' || shape.style.fillMode === 'random') {
-            @for (s of paletteStops; track $index) {
-              <svg:stop [attr.offset]="s.offset" [attr.stop-color]="s.color" />
-            }
-          } @else {
-            <svg:stop offset="0%" [attr.stop-color]="fillGradFrom" />
-            <svg:stop offset="100%" [attr.stop-color]="fillGradTo" />
+          @for (s of fillGradientStops; track $index) {
+            <svg:stop [attr.offset]="s.offset" [attr.stop-color]="s.color" />
           }
         </svg:linearGradient>
       }
       @if (needsStrokeDef) {
         <svg:linearGradient
           [attr.id]="'stroke-' + shape.id"
+          [attr.gradientUnits]="strokeGradientUnits"
           [attr.x1]="strokeGradCoords.x1"
           [attr.y1]="strokeGradCoords.y1"
           [attr.x2]="strokeGradCoords.x2"
           [attr.y2]="strokeGradCoords.y2"
         >
-          <svg:stop offset="0%" [attr.stop-color]="shape.style.stroke" />
-          <svg:stop offset="100%" [attr.stop-color]="shape.style.strokeEnd || shape.style.stroke" />
+          @for (s of strokeGradientStops; track $index) {
+            <svg:stop [attr.offset]="s.offset" [attr.stop-color]="s.color" />
+          }
         </svg:linearGradient>
       }
     </svg:defs>
   }
   @switch (shape.type) {
     @case ('freehand') {
-      <svg:path
-        [attr.d]="fhPath"
-        [attr.stroke]="strokeAttr"
-        [attr.stroke-width]="shape.style.strokeWidth"
-        fill="none"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
+      @if (fhStrokeSegments; as segs) {
+        @for (seg of segs; track $index) {
+          <svg:path
+            [attr.d]="seg.d"
+            [attr.stroke]="seg.color"
+            [attr.stroke-width]="shape.style.strokeWidth"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        }
+      } @else {
+        <svg:path
+          [attr.d]="fhPath"
+          [attr.stroke]="strokeAttr"
+          [attr.stroke-width]="shape.style.strokeWidth"
+          fill="none"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      }
     }
     @case ('line') {
       <svg:line
@@ -110,6 +142,14 @@
     @case ('hexagon') {
       <svg:polygon
         [attr.points]="hexagonPts"
+        [attr.stroke]="strokeAttr"
+        [attr.stroke-width]="shape.style.strokeWidth"
+        [attr.fill]="fillAttr"
+      />
+    }
+    @case ('star') {
+      <svg:polygon
+        [attr.points]="starPts"
         [attr.stroke]="strokeAttr"
         [attr.stroke-width]="shape.style.strokeWidth"
         [attr.fill]="fillAttr"

@@ -11,12 +11,15 @@
   flex-direction: column;
   align-items: center;
   gap: 0.4rem;
-  width: 3.5rem;
+  width: 5.6rem;
   height: 100%;
-  padding: 0.75rem 0.4rem;
+  padding: 0.75rem 0.35rem;
   background: var(--panel);
   border-right: 1px solid var(--line);
   box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .brand-mark {
@@ -32,32 +35,34 @@
   font-weight: 700;
   font-size: 1.1rem;
   letter-spacing: -0.04em;
+  flex-shrink: 0;
 }
 
 .group {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 2.25rem 2.25rem;
   gap: 0.25rem;
-  width: 100%;
-  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  justify-items: center;
+  flex: 0 0 auto;
 }
 
-.group.scroll {
-  flex: 1;
-  overflow-y: auto;
-  scrollbar-width: thin;
+.group.single {
+  grid-template-columns: 2.25rem;
 }
 
 .divider {
-  width: 1.6rem;
+  width: 3.6rem;
   height: 1px;
   background: var(--line);
   margin: 0.25rem 0;
+  flex-shrink: 0;
 }
 
 .tool {
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border: 0;
   border-radius: 0.55rem;
   background: transparent;
@@ -68,7 +73,7 @@
   transition:
     background 160ms ease,
     color 160ms ease,
-    transform 160ms ease;
+    box-shadow 160ms ease;
 }
 
 .tool:hover {
@@ -79,12 +84,11 @@
 .tool.active {
   background: var(--accent-soft);
   color: var(--accent);
-  transform: scale(1.06);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 .tool .material-symbols-outlined {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-variation-settings:
     'FILL' 0,
     'wght' 400,
@@ -93,8 +97,8 @@
 }
 
 .tool .rainbow-icon {
-  width: 1.4rem;
-  height: 1.4rem;
+  width: 1.3rem;
+  height: 1.3rem;
   display: block;
   overflow: visible;
 }

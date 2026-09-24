@@ -63,6 +63,9 @@ header h2 {
 .block.g-transform {
   background: #ffefc2; /* soft gold */
 }
+.block.g-star {
+  background: #fff6d0; /* pale star gold */
+}
 .block.g-octopus {
   background: #fff3bf; /* warm yellow */
 }
@@ -87,9 +90,6 @@ header h2 {
 .block.g-rainbow {
   background: #ebe0fa; /* lilac */
 }
-.block.g-defaults {
-  background: #f5efe6; /* warm cream */
-}
 .block.g-layers {
   background: #e4f2fb; /* powder blue */
 }
@@ -106,6 +106,9 @@ header h2 {
 }
 :host-context(html.dark) .block.g-transform {
   background: color-mix(in srgb, #ffd54f 34%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-star {
+  background: color-mix(in srgb, #ffe082 32%, var(--panel-soft));
 }
 :host-context(html.dark) .block.g-octopus {
   background: color-mix(in srgb, #fff176 32%, var(--panel-soft));
@@ -130,9 +133,6 @@ header h2 {
 }
 :host-context(html.dark) .block.g-rainbow {
   background: color-mix(in srgb, #ce93d8 34%, var(--panel-soft));
-}
-:host-context(html.dark) .block.g-defaults {
-  background: color-mix(in srgb, #d7ccc8 26%, var(--panel-soft));
 }
 :host-context(html.dark) .block.g-layers {
   background: color-mix(in srgb, #90caf9 32%, var(--panel-soft));
@@ -288,10 +288,56 @@ header h2 {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
+/* Gradient stops: same right-column alignment as preset/mode + swatch */
+.grad-stops {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  min-width: 0;
+  /* select max 8.5rem + gap + swatch 2rem ≈ same visual width as mode-with-swatch */
+  width: calc(8.5rem + 0.4rem + 2rem);
+  box-sizing: border-box;
+}
+
+.grad-stops input[type='color'] {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  height: 1.5rem;
+}
+
+.grad-arrow {
+  flex-shrink: 0;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--block-ink-muted, var(--ink-muted));
+}
+
 .row input[type='range'] {
   grid-column: 1 / -1;
   width: 100%;
   accent-color: var(--accent);
+}
+
+.row.slider {
+  align-items: center;
+}
+
+.row.slider .spin {
+  grid-column: 2;
+  grid-row: 1;
+  width: 4.25rem;
+  min-width: 4.25rem;
+  max-width: 4.25rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.row.slider input[type='range'] {
+  grid-column: 1 / -1;
+  grid-row: 2;
 }
 
 .row input[type='number'],
@@ -353,7 +399,7 @@ header h2 {
 
 .layer-item {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto auto;
   align-items: center;
   gap: 0.25rem;
   padding: 0.35rem 0.4rem;
@@ -386,10 +432,75 @@ header h2 {
   white-space: nowrap;
 }
 
+.layer-chip {
+  flex-shrink: 0;
+  min-width: 1.35rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.layer-chip--low {
+  background: #c8e6c9;
+  color: #1b5e20;
+}
+
+.layer-chip--mid {
+  background: #ffe082;
+  color: #5d4037;
+}
+
+.layer-chip--high {
+  background: #ffcdd2;
+  color: #b71c1c;
+}
+
+:host-context(html.dark) .layer-chip--low {
+  background: color-mix(in srgb, #81c784 45%, var(--input-bg));
+  color: #e8f5e9;
+}
+
+:host-context(html.dark) .layer-chip--mid {
+  background: color-mix(in srgb, #ffd54f 45%, var(--input-bg));
+  color: #fff8e1;
+}
+
+:host-context(html.dark) .layer-chip--high {
+  background: color-mix(in srgb, #e57373 45%, var(--input-bg));
+  color: #ffebee;
+}
+
 .layer-id {
   font-size: 0.68rem;
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.layer-dup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.3rem;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.layer-dup:hover {
+  background: var(--panel-hover);
+  color: var(--accent);
+}
+
+.layer-dup .material-symbols-outlined {
+  font-size: 1.05rem;
 }
 
 .layer-empty {
@@ -413,6 +524,13 @@ header h2 {
 
 .ghost:hover {
   background: var(--panel-hover);
+}
+
+.sub-sep {
+  height: 0;
+  margin: 0.35rem 0 0.15rem;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
 }
 
 .fade-in {

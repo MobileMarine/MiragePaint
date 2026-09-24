@@ -1,0 +1,31 @@
+---
+description: Inspector-Controls konsolidieren und wiederverwenden
+globs: src/app/editor/inspector/**,src/app/core/models/shape.ts,src/app/core/style/presets.ts
+alwaysApply: false
+---
+
+# Inspector: Controls wiederverwenden
+
+Gleiche Semantik → **eine** wiederverwendbare Control-Komponente. Kante und Füllung nicht duplizieren.
+
+## Pflicht
+
+1. Neue Style-UI nur über Shared Controls unter `src/app/editor/inspector/controls/` (oder bestehende erweitern).
+2. **Mode-Parität** Stroke/Fill: ausschließlich `none | solid | gradient`.
+3. Spezielle Paletten (Regenbogen, Neon, Random, …) gehören in **Presets**, nicht in Extra-Modi.
+4. Verlauf: Preset-Picker mit Vorschau **in den Einträgen**; Mode-Swatch zeigt die aktuelle Farbe/Verlauf und öffnet Picker/Color.
+5. Kein zweiter Verlaufs-Swatch neben dem Preset-Dropdown (Vorschau sitzt am Modus).
+
+## Bestehende Shared Controls
+
+| Component | Zweck |
+|-----------|--------|
+| `StyleModeControl` | Keine / Farbe / Verlauf + Swatch |
+| `PresetPicker` | Custom-Dropdown mit Mini-Swatch pro Preset |
+| `GradientColorsRow` | Von → Nach in einer Zeile |
+| `GradientStepsControl` | Abstufungen an/aus + Anzahl (readonly wenn regionengekoppelt) |
+| `StrokeGlowControl` | Glow Farbe / Breite / Deckkraft |
+
+## Regionengekoppelte Abstufungen
+
+Readonly `steps` für: Circles→count, CircleLine/RandomStar→arms, MultiStar→stages, Sonnenblume→petals, CenterLines→rays.length, Firework→trails.

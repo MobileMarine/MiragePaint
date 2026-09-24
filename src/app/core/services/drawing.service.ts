@@ -26,6 +26,7 @@ import {
   RegularPolygonParams,
   Shape,
   ShapeType,
+  StarParams,
   StrokeMode,
   StyleProps,
   SunflowerParams,
@@ -45,7 +46,8 @@ import { HistoryService } from './history.service';
 import { UiPrefsService } from './ui-prefs.service';
 import { worldBoundsForShape } from '../render/geometry';
 import { COLOR_PRESETS, presetById } from '../style/presets';
-import { schemeFromFillMode, pickFillStops } from '../style/firework-palettes';
+import { pickFillStops } from '../style/firework-palettes';
+import { regionStepCount } from '../style/region-steps';
 
 const DEFAULT_META: DocumentMeta = {
   background: '',
@@ -66,7 +68,8 @@ const EFFECT_DEFAULTS = {
     dotTrails: false,
     wind: 0,
   },
-  rainbow: { mode: 'gradient' as const },
+  rainbow: { mode: 'gradient' as const, bandWidth: 48 },
+  star: { points: 5, innerRatio: 0.45 },
 };
 
 @Injectable({ providedIn: 'root' })
@@ -92,6 +95,15 @@ export class DrawingService {
   readonly fillGradientTo = signal('#f7c948');
   /** Cached multi-stop palette for neon / random (stable across drag redraws). */
   readonly fillPaletteStops = signal<string[] | null>(null);
+  readonly strokePaletteStops = signal<string[] | null>(null);
+  readonly fillStepped = signal(false);
+  readonly fillSteps = signal(8);
+  readonly strokeStepped = signal(false);
+  readonly strokeSteps = signal(8);
+  readonly strokeGlowEnabled = signal(false);
+  readonly strokeGlowColor = signal('#ffffff');
+  readonly strokeGlowWidth = signal(8);
+  readonly strokeGlowOpacity = signal(0.55);
   readonly darkMode = signal(false);
   readonly collapsedSections = signal<Record<string, boolean>>({});
   readonly draft = signal<Shape | null>(null);
@@ -175,15 +187,55 @@ export class DrawingService {
     if (p.pan && typeof p.pan.x === 'number' && typeof p.pan.y === 'number') {
       this.pan.set({ x: p.pan.x, y: p.pan.y });
     }
-    if (p.tool) this.tool.set(p.tool);
+    if (p.tool === 'gradient' || p.tool === 'gradientCircle') {
+      this.tool.set('rect');
+    } else if (p.tool) {
+      this.tool.set(p.tool);
+    }
     if (p.strokeColor) this.strokeColor.set(p.strokeColor);
     if (p.strokeEndColor) this.strokeEndColor.set(p.strokeEndColor);
     if (p.fillColor) this.fillColor.set(p.fillColor);
     if (typeof p.strokeWidth === 'number') this.strokeWidth.set(p.strokeWidth);
     if (typeof p.opacity === 'number') this.opacity.set(p.opacity);
-    if (p.fillMode) this.fillMode.set(p.fillMode);
-    if (p.strokeMode) this.strokeMode.set(p.strokeMode);
-    if (p.fillPresetId !== undefined) this.fillPresetId.set(p.fillPresetId);
+    if (p.fillMode) {
+      const legacy = p.fillMode as string;
+      if (
+        legacy === 'rainbowGradient' ||
+        legacy === 'rainbowStripes' ||
+        legacy === 'neon' ||
+        legacy === 'random'
+      ) {
+        this.fillMode.set('gradient');
+        const presetId =
+          legacy === 'rainbowGradient' || legacy === 'rainbowStripes'
+            ? 'rainbow'
+            : legacy;
+        this.fillPresetId.set(presetId);
+        this.fillStepped.set(legacy === 'rainbowStripes');
+        if (legacy === 'rainbowStripes') this.fillSteps.set(6);
+      } else if (legacy === 'none' || legacy === 'solid' || legacy === 'gradient') {
+        this.fillMode.set(legacy);
+        if (p.fillPresetId === 'rainbow-stripes') {
+          this.fillPresetId.set('rainbow');
+          this.fillStepped.set(true);
+          this.fillSteps.set(6);
+        } else if (p.fillPresetId !== undefined) {
+          this.fillPresetId.set(p.fillPresetId);
+        }
+      }
+    } else if (p.fillPresetId === 'rainbow-stripes') {
+      this.fillPresetId.set('rainbow');
+      this.fillStepped.set(true);
+      this.fillSteps.set(6);
+    } else if (p.fillPresetId !== undefined) {
+      this.fillPresetId.set(p.fillPresetId);
+    }
+    if (p.strokeMode) {
+      const sm = p.strokeMode as string;
+      if (sm === 'none' || sm === 'solid' || sm === 'gradient') {
+        this.strokeMode.set(sm);
+      }
+    }
     if (p.strokePresetId !== undefined) this.strokePresetId.set(p.strokePresetId);
     if (typeof p.fillAngle === 'number') this.fillAngle.set(p.fillAngle);
     if (typeof p.strokeAngle === 'number') this.strokeAngle.set(p.strokeAngle);
@@ -338,8 +390,28 @@ export class DrawingService {
         this.fillGradientTo.set(st.fillGradient.to);
         this.fillPresetId.set(st.fillGradient.presetId ?? null);
         this.fillPaletteStops.set(st.fillGradient.stops ?? null);
+        this.fillStepped.set(!!st.fillGradient.stepped);
+        if (st.fillGradient.steps != null) this.fillSteps.set(st.fillGradient.steps);
       } else {
         this.fillPaletteStops.set(null);
+        this.fillStepped.set(false);
+      }
+      if (st.strokeGradient) {
+        this.strokePresetId.set(st.strokeGradient.presetId ?? null);
+        this.strokePaletteStops.set(st.strokeGradient.stops ?? null);
+        this.strokeStepped.set(!!st.strokeGradient.stepped);
+        if (st.strokeGradient.steps != null) this.strokeSteps.set(st.strokeGradient.steps);
+      } else {
+        this.strokePaletteStops.set(null);
+        this.strokeStepped.set(false);
+      }
+      if (st.strokeGlow) {
+        this.strokeGlowEnabled.set(true);
+        this.strokeGlowColor.set(st.strokeGlow.color);
+        this.strokeGlowWidth.set(st.strokeGlow.width);
+        this.strokeGlowOpacity.set(st.strokeGlow.opacity);
+      } else {
+        this.strokeGlowEnabled.set(false);
       }
     }
   }
@@ -364,40 +436,87 @@ export class DrawingService {
   applyFillPreset(presetId: string | null): void {
     this.fillPresetId.set(presetId);
     const p = presetById(presetId);
-    if (p) {
-      this.fillGradientFrom.set(p.from);
-      this.fillGradientTo.set(p.to);
-      this.fillMode.set('gradient');
-      if (this.selectedShape()) {
-        this.updateSelectedStyle({
-          fillMode: 'gradient',
-          fillGradient: {
-            angle: this.fillAngle(),
-            from: p.from,
-            to: p.to,
-            presetId: p.id,
-          },
-        });
-      }
+    if (!p) return;
+    const stops = p.stops && p.stops.length >= 2 ? [...p.stops] : [p.from, p.to];
+    this.fillGradientFrom.set(stops[0]);
+    this.fillGradientTo.set(stops[stops.length - 1]);
+    this.fillPaletteStops.set(stops);
+    this.fillStepped.set(!!p.stepped);
+    if (p.steps != null) this.fillSteps.set(p.steps);
+    else if (p.stepped) this.fillSteps.set(stops.length);
+    this.fillMode.set('gradient');
+    if (p.kind === 'neon' || p.kind === 'random') {
+      const seed = (Math.random() * 0xffffffff) >>> 0;
+      const rolled = pickFillStops(p.kind, seed);
+      this.fillPaletteStops.set(rolled);
+      this.fillGradientFrom.set(rolled[0]);
+      this.fillGradientTo.set(rolled[rolled.length - 1]);
+    }
+    if (this.selectedShape()) {
+      this.updateSelectedStyle(this.buildFillGradientPatch());
     }
   }
 
   applyStrokePreset(presetId: string | null): void {
     this.strokePresetId.set(presetId);
-    const p = presetById(presetId);
-    if (p) {
-      this.strokeColor.set(p.from);
-      this.strokeEndColor.set(p.to);
-      this.strokeMode.set('gradient');
-      if (this.selectedShape()) {
-        this.updateSelectedStyle({
-          strokeMode: 'gradient',
-          stroke: p.from,
-          strokeEnd: p.to,
-          strokeAngle: this.strokeAngle(),
-        });
-      }
+    if (!presetId) {
+      this.strokePaletteStops.set(null);
+      return;
     }
+    const p = presetById(presetId);
+    if (!p) return;
+    let stops = p.stops && p.stops.length >= 2 ? [...p.stops] : [p.from, p.to];
+    if (p.kind === 'neon' || p.kind === 'random') {
+      const seed = (Math.random() * 0xffffffff) >>> 0;
+      stops = pickFillStops(p.kind, seed);
+    }
+    this.strokeColor.set(stops[0]);
+    this.strokeEndColor.set(stops[stops.length - 1]);
+    this.strokePaletteStops.set(stops);
+    this.strokeStepped.set(!!p.stepped);
+    if (p.steps != null) this.strokeSteps.set(p.steps);
+    else if (p.stepped) this.strokeSteps.set(stops.length);
+    this.strokeMode.set('gradient');
+    if (this.selectedShape()) {
+      this.updateSelectedStyle(this.buildStrokeGradientPatch());
+    }
+  }
+
+  /** Rebuild fill gradient style patch from current signals. */
+  buildFillGradientPatch(): Partial<StyleProps> {
+    const stops = this.fillPaletteStops();
+    return {
+      fillMode: 'gradient',
+      fill: stops?.[0] ?? this.fillGradientFrom(),
+      fillGradient: {
+        angle: this.fillAngle(),
+        from: this.fillGradientFrom(),
+        to: this.fillGradientTo(),
+        presetId: this.fillPresetId() ?? undefined,
+        stops: stops && stops.length >= 2 ? stops : undefined,
+        stepped: this.fillStepped(),
+        steps: this.fillSteps(),
+      },
+    };
+  }
+
+  buildStrokeGradientPatch(): Partial<StyleProps> {
+    const stops = this.strokePaletteStops();
+    return {
+      strokeMode: 'gradient',
+      stroke: this.strokeColor(),
+      strokeEnd: this.strokeEndColor(),
+      strokeAngle: this.strokeAngle(),
+      strokeGradient: {
+        angle: this.strokeAngle(),
+        from: this.strokeColor(),
+        to: this.strokeEndColor(),
+        presetId: this.strokePresetId() ?? undefined,
+        stops: stops && stops.length >= 2 ? stops : undefined,
+        stepped: this.strokeStepped(),
+        steps: this.strokeSteps(),
+      },
+    };
   }
 
   deleteSelected(): void {
@@ -412,6 +531,17 @@ export class DrawingService {
   duplicateSelected(): void {
     const selected = this.selectedShapes();
     if (!selected.length) return;
+    this.duplicateShapes(selected);
+  }
+
+  /** Clone a single shape by id (used from the layers list). */
+  duplicateShape(id: string): void {
+    const shape = this.shapes().find((s) => s.id === id);
+    if (!shape) return;
+    this.duplicateShapes([shape]);
+  }
+
+  private duplicateShapes(selected: Shape[]): void {
     const offset = 24;
     const clones = selected.map((s) => ({
       ...structuredClone(s),
@@ -538,7 +668,35 @@ export class DrawingService {
         s.id === id ? { ...s, params: { ...s.params, ...partial } as Shape['params'] } : s,
       ),
     );
+    this.syncRegionBoundGradientSteps(id);
     this.pushSnapshot();
+  }
+
+  /** Keep stepped gradient band count in sync with region-linked shape params. */
+  private syncRegionBoundGradientSteps(shapeId: string): void {
+    const shape = this.shapes().find((s) => s.id === shapeId);
+    if (!shape) return;
+    const n = regionStepCount(shape, undefined, undefined, shape.style.fillGradient?.presetId);
+    if (n == null) return;
+
+    const stylePatch: Partial<StyleProps> = {};
+    if (shape.style.fillMode === 'gradient' && shape.style.fillGradient) {
+      this.fillStepped.set(true);
+      this.fillSteps.set(n);
+      stylePatch.fillGradient = { ...shape.style.fillGradient, stepped: true, steps: n };
+    }
+    if (shape.style.strokeMode === 'gradient' && shape.style.strokeGradient) {
+      this.strokeStepped.set(true);
+      this.strokeSteps.set(n);
+      stylePatch.strokeGradient = { ...shape.style.strokeGradient, stepped: true, steps: n };
+    }
+    if (Object.keys(stylePatch).length) {
+      this.shapes.update((list) =>
+        list.map((s) =>
+          s.id === shapeId ? { ...s, style: { ...s.style, ...stylePatch } } : s,
+        ),
+      );
+    }
   }
 
   updateSelectedTransform(partial: Partial<Transform2D>, commit = true): void {
@@ -620,8 +778,8 @@ export class DrawingService {
       this.stopFireworkAnim();
       const ep = this.effectParams().firework;
       const scheme =
-        this.fillMode() === 'neon' || this.fillMode() === 'random'
-          ? schemeFromFillMode(this.fillMode())
+        this.fillPresetId() === 'neon' || this.fillPresetId() === 'random'
+          ? (this.fillPresetId() as FireworkScheme)
           : ep.scheme;
       this.draft.set({
         id,
@@ -648,7 +806,7 @@ export class DrawingService {
     this.draft.set(this.createDragDraft(tool, id, point, style));
   }
 
-  continueStroke(point: Point2D, start: Point2D): void {
+  continueStroke(point: Point2D, start: Point2D, opts?: { constrainEqual?: boolean }): void {
     const d = this.draft();
     if (!d) return;
 
@@ -688,10 +846,10 @@ export class DrawingService {
       return;
     }
 
-    this.draft.set(this.updateDragDraft(d, start, point));
+    this.draft.set(this.updateDragDraft(d, start, point, !!opts?.constrainEqual));
   }
 
-  endStroke(point: Point2D, start: Point2D): void {
+  endStroke(point: Point2D, start: Point2D, opts?: { constrainEqual?: boolean }): void {
     const d = this.draft();
     if (!d) return;
 
@@ -721,7 +879,7 @@ export class DrawingService {
         return;
       }
     } else {
-      finalShape = this.updateDragDraft(d, start, point);
+      finalShape = this.updateDragDraft(d, start, point, !!opts?.constrainEqual);
       if (this.isDegenerate(finalShape)) {
         this.draft.set(null);
         return;
@@ -836,36 +994,33 @@ export class DrawingService {
     );
     style.strokeMode = strokeMode;
     style.strokeAngle = this.strokeAngle();
-    style.fillMode = fillMode;
+    style.fillMode = fillMode === 'none' || fillMode === 'solid' || fillMode === 'gradient'
+      ? fillMode
+      : 'solid';
+
+    if (strokeMode === 'gradient') {
+      Object.assign(style, this.buildStrokeGradientPatch());
+    }
+    if (this.strokeGlowEnabled()) {
+      style.strokeGlow = {
+        color: this.strokeGlowColor(),
+        width: this.strokeGlowWidth(),
+        opacity: this.strokeGlowOpacity(),
+      };
+    }
+
     if (fillMode === 'gradient') {
-      style.fillGradient = {
-        angle: this.fillAngle(),
-        from: this.fillGradientFrom(),
-        to: this.fillGradientTo(),
-        presetId: this.fillPresetId() ?? undefined,
-      };
-    } else if (fillMode === 'rainbowGradient' || fillMode === 'rainbowStripes') {
-      style.fillGradient = {
-        angle: this.fillAngle(),
-        from: this.fillGradientFrom(),
-        to: this.fillGradientTo(),
-      };
-    } else if (fillMode === 'neon' || fillMode === 'random') {
       let stops = this.fillPaletteStops();
-      if (!stops?.length) {
+      const preset = presetById(this.fillPresetId());
+      if ((preset?.kind === 'neon' || preset?.kind === 'random') && !stops?.length) {
         const seed = (Math.random() * 0xffffffff) >>> 0;
-        stops = pickFillStops(fillMode, seed);
+        stops = pickFillStops(preset.kind, seed);
         this.fillPaletteStops.set(stops);
         this.fillGradientFrom.set(stops[0]);
         this.fillGradientTo.set(stops[stops.length - 1]);
       }
-      style.fill = stops[0];
-      style.fillGradient = {
-        angle: this.fillAngle(),
-        from: stops[0],
-        to: stops[stops.length - 1],
-        stops,
-      };
+      Object.assign(style, this.buildFillGradientPatch());
+      if (stops?.length) style.fill = stops[0];
     }
     return style;
   }
@@ -952,6 +1107,23 @@ export class DrawingService {
             rotation: -90,
           } satisfies RegularPolygonParams,
         };
+      case 'star': {
+        const sp = this.effectParams().star;
+        return {
+          id,
+          type: 'star',
+          style: { ...style, fill: style.fill === 'none' ? 'transparent' : style.fill },
+          transform: createTransform(),
+          params: {
+            cx: start.x,
+            cy: start.y,
+            radius: 0,
+            rotation: -90,
+            points: Math.max(3, Math.min(24, Math.round(sp.points ?? 5))),
+            innerRatio: sp.innerRatio ?? 0.45,
+          } satisfies StarParams,
+        };
+      }
       case 'gradient':
         return {
           id,
@@ -1029,7 +1201,10 @@ export class DrawingService {
           } satisfies SunflowerParams,
         };
       case 'rainbow': {
-        const bandWidth = Math.max(12, style.strokeWidth * 8);
+        const bandWidth = Math.max(
+          12,
+          ep.rainbow.bandWidth ?? style.strokeWidth * 8,
+        );
         return {
           id,
           type: 'rainbow',
@@ -1056,9 +1231,21 @@ export class DrawingService {
     }
   }
 
-  private updateDragDraft(d: Shape, start: Point2D, end: Point2D): Shape {
-    const angle = getAngle(start, end);
-    const dist = Math.hypot(end.x - start.x, end.y - start.y);
+  private updateDragDraft(
+    d: Shape,
+    start: Point2D,
+    end: Point2D,
+    constrainEqual = false,
+  ): Shape {
+    const useEqual =
+      constrainEqual &&
+      (d.type === 'rect' ||
+        d.type === 'ellipse' ||
+        d.type === 'triangle' ||
+        d.type === 'heart');
+    const tip = useEqual ? equalAspectEnd(start, end) : end;
+    const angle = getAngle(start, tip);
+    const dist = Math.hypot(tip.x - start.x, tip.y - start.y);
 
     switch (d.type) {
       case 'line':
@@ -1067,11 +1254,11 @@ export class DrawingService {
           params: { x1: start.x, y1: start.y, x2: end.x, y2: end.y } satisfies LineParams,
         };
       case 'rect': {
-        const r = normalizeRect(start.x, start.y, end.x, end.y);
+        const r = normalizeRect(start.x, start.y, tip.x, tip.y);
         return { ...d, params: r satisfies RectParams };
       }
       case 'ellipse': {
-        const r = normalizeRect(start.x, start.y, end.x, end.y);
+        const r = normalizeRect(start.x, start.y, tip.x, tip.y);
         return {
           ...d,
           params: {
@@ -1085,10 +1272,12 @@ export class DrawingService {
       case 'triangle':
         return {
           ...d,
-          params: { points: triangleFromDrag(start.x, start.y, end.x, end.y) } satisfies TriangleParams,
+          params: {
+            points: triangleFromDrag(start.x, start.y, tip.x, tip.y),
+          } satisfies TriangleParams,
         };
       case 'heart': {
-        const r = normalizeRect(start.x, start.y, end.x, end.y);
+        const r = normalizeRect(start.x, start.y, tip.x, tip.y);
         return { ...d, params: r satisfies HeartParams };
       }
       case 'pentagon':
@@ -1102,8 +1291,21 @@ export class DrawingService {
             rotation: -90,
           } satisfies RegularPolygonParams,
         };
+      case 'star': {
+        const prev = d.params as StarParams;
+        return {
+          ...d,
+          params: {
+            ...prev,
+            cx: start.x,
+            cy: start.y,
+            radius: Math.max(2, dist),
+            rotation: -90,
+          } satisfies StarParams,
+        };
+      }
       case 'gradient': {
-        const r = normalizeRect(start.x, start.y, end.x, end.y);
+        const r = normalizeRect(start.x, start.y, tip.x, tip.y);
         return { ...d, params: r satisfies GradientParams };
       }
       case 'gradientCircle':
@@ -1212,6 +1414,10 @@ export class DrawingService {
         const p = shape.params as RegularPolygonParams;
         return p.radius < 2;
       }
+      case 'star': {
+        const p = shape.params as StarParams;
+        return p.radius < 2;
+      }
       case 'sunflower': {
         const p = shape.params as SunflowerParams;
         return p.radius < 8;
@@ -1239,4 +1445,14 @@ export class DrawingService {
       this.history.seed(this.snapshot());
     }
   }
+}
+
+/** Square/circle drag: same |dx| and |dy| from start, keeping quadrant. */
+function equalAspectEnd(start: Point2D, end: Point2D): Point2D {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const side = Math.max(Math.abs(dx), Math.abs(dy));
+  const sx = dx < 0 ? -1 : 1;
+  const sy = dy < 0 ? -1 : 1;
+  return { x: start.x + sx * side, y: start.y + sy * side };
 }

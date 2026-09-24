@@ -18,6 +18,7 @@ import {
   RectParams,
   RegularPolygonParams,
   Shape,
+  StarParams,
   StyleProps,
   SunflowerParams,
   FireworkParams,
@@ -34,17 +35,70 @@ import {
   generateRandomStar,
   heartPath,
   regularPolygonPoints,
+  starPolygonPoints,
   sunflowerLayout,
   GenPrimitive,
 } from '../generators/shapes';
 import { colorAt, PaletteMode, RAINBOW_COLORS } from '../style/presets';
 
-export { RAINBOW_COLORS, heartPath, regularPolygonPoints, sunflowerLayout };
+export { RAINBOW_COLORS, heartPath, regularPolygonPoints, starPolygonPoints, sunflowerLayout };
 
 export function freehandPath(params: FreehandParams): string {
   if (!params.points.length) return '';
   const [first, ...rest] = params.points;
   return `M ${first.x} ${first.y} ` + rest.map((p) => `L ${p.x} ${p.y}`).join(' ');
+}
+
+/** Colored path segments so stroke gradient follows freehand arc length. */
+export function freehandStrokeSegments(
+  params: FreehandParams,
+  style: StyleProps,
+): { d: string; color: string }[] | null {
+  if (style.strokeMode !== 'gradient') return null;
+  const pts = params.points;
+  if (pts.length < 2) return null;
+
+  const g = style.strokeGradient;
+  const palette =
+    g?.stops && g.stops.length >= 2
+      ? g.stops
+      : [g?.from ?? style.stroke, g?.to ?? style.strokeEnd ?? style.stroke];
+  const stepped = !!g?.stepped;
+  const n = stepped
+    ? Math.max(2, Math.round(g?.steps ?? 8))
+    : Math.min(64, Math.max(12, pts.length - 1));
+
+  const cum: number[] = [0];
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i].x - pts[i - 1].x;
+    const dy = pts[i].y - pts[i - 1].y;
+    cum.push(cum[i - 1] + Math.hypot(dx, dy));
+  }
+  const total = cum[cum.length - 1];
+  if (total < 1e-6) return null;
+
+  const pointAt = (dist: number): Point2D => {
+    const t = Math.min(total, Math.max(0, dist));
+    let i = 1;
+    while (i < cum.length && cum[i] < t) i++;
+    const i0 = Math.max(1, i) - 1;
+    const i1 = Math.min(pts.length - 1, i0 + 1);
+    const segLen = cum[i1] - cum[i0];
+    const u = segLen < 1e-9 ? 0 : (t - cum[i0]) / segLen;
+    return {
+      x: pts[i0].x + (pts[i1].x - pts[i0].x) * u,
+      y: pts[i0].y + (pts[i1].y - pts[i0].y) * u,
+    };
+  };
+
+  const out: { d: string; color: string }[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = pointAt((i / n) * total);
+    const b = pointAt(((i + 1) / n) * total);
+    const color = colorAt(i, n, stepped ? 'stepped' : 'gradient', palette[0], palette[palette.length - 1], palette, stepped, n);
+    out.push({ d: `M ${a.x} ${a.y} L ${b.x} ${b.y}`, color });
+  }
+  return out;
 }
 
 export function trianglePoints(params: TriangleParams): string {
@@ -57,6 +111,20 @@ export function polygonPoints(params: PolygonParams): string {
 
 export function regularPolyPointsAttr(params: RegularPolygonParams, sides: number): string {
   return regularPolygonPoints(params.cx, params.cy, params.radius, sides, params.rotation)
+    .map((p) => `${p.x},${p.y}`)
+    .join(' ');
+}
+
+export function starPointsAttr(params: StarParams): string {
+  const inner = (params.innerRatio ?? 0.45) * params.radius;
+  return starPolygonPoints(
+    params.cx,
+    params.cy,
+    params.radius,
+    inner,
+    params.points,
+    params.rotation,
+  )
     .map((p) => `${p.x},${p.y}`)
     .join(' ');
 }
@@ -197,17 +265,12 @@ export function localToWorldPoint(
 
 /** Resolve palette mode for multi-primitive generators. */
 export function effectPaletteMode(style: StyleProps): PaletteMode {
-  const fm = style.fillMode;
-  if (
-    fm === 'rainbowGradient' ||
-    fm === 'rainbowStripes' ||
-    fm === 'gradient' ||
-    fm === 'neon' ||
-    fm === 'random'
-  ) {
-    return fm;
+  if (style.fillMode === 'gradient') {
+    return style.fillGradient?.stepped ? 'stepped' : 'gradient';
   }
-  if (style.strokeMode === 'gradient') return 'gradient';
+  if (style.strokeMode === 'gradient') {
+    return style.strokeGradient?.stepped ? 'stepped' : 'gradient';
+  }
   return 'solid';
 }
 
@@ -215,12 +278,25 @@ export function effectPaletteColors(style: StyleProps): {
   from: string;
   to: string;
   stops?: string[];
+  stepped?: boolean;
+  steps?: number;
 } {
-  if (style.fillGradient) {
+  if (style.fillMode === 'gradient' && style.fillGradient) {
     return {
       from: style.fillGradient.from,
       to: style.fillGradient.to,
       stops: style.fillGradient.stops,
+      stepped: style.fillGradient.stepped,
+      steps: style.fillGradient.steps,
+    };
+  }
+  if (style.strokeGradient) {
+    return {
+      from: style.strokeGradient.from,
+      to: style.strokeGradient.to,
+      stops: style.strokeGradient.stops,
+      stepped: style.strokeGradient.stepped,
+      steps: style.strokeGradient.steps,
     };
   }
   return {
@@ -230,33 +306,30 @@ export function effectPaletteColors(style: StyleProps): {
 }
 
 export function circlesUseFill(style: StyleProps): boolean {
-  const fm = style.fillMode;
-  return (
-    fm === 'solid' ||
-    fm === 'gradient' ||
-    fm === 'rainbowGradient' ||
-    fm === 'rainbowStripes' ||
-    fm === 'neon' ||
-    fm === 'random'
-  );
+  return style.fillMode === 'solid' || style.fillMode === 'gradient';
 }
 
 /** Stroke color for line i of n (insertion order), matching MultiStar palette rules. */
 export function lineColorAt(style: StyleProps, i: number, n: number): string {
   const mode = effectPaletteMode(style);
-  const { from, to, stops } = effectPaletteColors(style);
+  const { from, to, stops, stepped, steps } = effectPaletteColors(style);
   const palFrom = mode === 'solid' ? style.stroke : from;
   const palTo = mode === 'solid' ? style.stroke : to;
-  return colorAt(i, Math.max(1, n), mode, palFrom, palTo, stops);
+  return colorAt(i, Math.max(1, n), mode, palFrom, palTo, stops, stepped, steps);
 }
 
 export function shapePrimitives(shape: Shape): GenPrimitive[] {
   const stroke = shape.style.stroke;
   const end = shape.style.strokeEnd ?? stroke;
   const mode = effectPaletteMode(shape.style);
-  const { from, to } = effectPaletteColors(shape.style);
-  const palFrom = mode === 'solid' ? stroke : from;
-  const palTo = mode === 'solid' ? stroke : to;
+  const pal = effectPaletteColors(shape.style);
+  const palFrom = mode === 'solid' ? stroke : pal.from;
+  const palTo = mode === 'solid' ? stroke : pal.to;
+  const palExtra = {
+    stops: pal.stops,
+    stepped: pal.stepped,
+    steps: pal.steps,
+  };
 
   switch (shape.type) {
     case 'octopus': {
@@ -271,6 +344,7 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
         palFrom,
         palTo,
         mode,
+        palExtra,
       );
     }
     case 'multiStar': {
@@ -285,15 +359,16 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
         palFrom,
         palTo,
         mode,
+        palExtra,
       );
     }
     case 'randomStar': {
       const p = shape.params as RandomStarParams;
-      return generateRandomStar(p.arms, p.radius, p.seed, palFrom, palTo, mode);
+      return generateRandomStar(p.arms, p.radius, p.seed, palFrom, palTo, mode, palExtra);
     }
     case 'circleLine': {
       const p = shape.params as CircleLineParams;
-      return generateCircleLine(p.arms, p.radius, p.startAngle, palFrom, palTo, mode);
+      return generateCircleLine(p.arms, p.radius, p.startAngle, palFrom, palTo, mode, palExtra);
     }
     case 'circles': {
       const p = shape.params as CirclesParams;
@@ -312,11 +387,12 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
         cTo,
         mode,
         filled,
+        palExtra,
       );
     }
     case 'gradientCircle': {
       const p = shape.params as GradientCircleParams;
-      return generateGradientCircle(-p.rx, -p.ry, p.rx * 2, p.ry * 2, palFrom, palTo, mode);
+      return generateGradientCircle(-p.rx, -p.ry, p.rx * 2, p.ry * 2, palFrom, palTo, mode, palExtra);
     }
     case 'gradient': {
       const p = shape.params as GradientParams;
@@ -365,6 +441,11 @@ export function boundsForShape(shape: Shape): { x: number; y: number; w: number;
     case 'pentagon':
     case 'hexagon': {
       const p = shape.params as RegularPolygonParams;
+      const r = p.radius || 1;
+      return { x: p.cx - r, y: p.cy - r, w: r * 2, h: r * 2 };
+    }
+    case 'star': {
+      const p = shape.params as StarParams;
       const r = p.radius || 1;
       return { x: p.cx - r, y: p.cy - r, w: r * 2, h: r * 2 };
     }

@@ -9,6 +9,7 @@ import {
   RainbowParams,
   RegularPolygonParams,
   Shape,
+  StarParams,
   SunflowerParams,
   TriangleParams,
 } from '../../core/models/shape';
@@ -17,19 +18,22 @@ import {
   effectPaletteColors,
   effectPaletteMode,
   freehandPath,
+  freehandStrokeSegments,
   heartPathAttr,
   lineColorAt,
   polygonPoints,
   rainbowBands,
   regularPolyPointsAttr,
   shapePrimitives,
+  starPointsAttr,
   sunflowerLayout,
   transformAttr,
   trianglePoints,
 } from '../../core/render/geometry';
 import { evaluateFirework } from '../../core/generators/firework';
-import { RAINBOW_COLORS } from '../../core/style/presets';
+import { buildStopsFromGradient, buildLinearStops } from '../../core/style/presets';
 import { DrawingService } from '../../core/services/drawing.service';
+import { LineParams } from '../../core/models/shape';
 
 @Component({
   selector: 'svg:g[app-shape-layer]',
@@ -53,6 +57,40 @@ export class ShapeLayerComponent {
 
   get fhPath(): string {
     return freehandPath(this.shape.params as FreehandParams);
+  }
+
+  /** When set, freehand is drawn as colored segments along the path. */
+  get fhStrokeSegments(): { d: string; color: string }[] | null {
+    if (this.shape.type !== 'freehand') return null;
+    return freehandStrokeSegments(this.shape.params as FreehandParams, this.shape.style);
+  }
+
+  get strokeAlongPath(): boolean {
+    return this.shape.type === 'line' && this.shape.style.strokeMode === 'gradient';
+  }
+
+  get needsStrokeDef(): boolean {
+    if (this.shape.style.strokeMode !== 'gradient') return false;
+    // Freehand uses solid segment strokes instead of a gradient def
+    if (this.shape.type === 'freehand' && this.fhStrokeSegments) return false;
+    return true;
+  }
+
+  get strokeGradCoords() {
+    if (this.strokeAlongPath) {
+      const p = this.shape.params as LineParams;
+      return {
+        x1: String(p.x1),
+        y1: String(p.y1),
+        x2: String(p.x2),
+        y2: String(p.y2),
+      };
+    }
+    return this.gradCoords(this.strokeGradAngle);
+  }
+
+  get strokeGradientUnits(): string | null {
+    return this.strokeAlongPath ? 'userSpaceOnUse' : null;
   }
 
   get triPts(): string {
@@ -79,15 +117,7 @@ export class ShapeLayerComponent {
   get fillAttr(): string {
     const mode = this.shape.style.fillMode;
     if (mode === 'none') return 'none';
-    if (
-      mode === 'gradient' ||
-      mode === 'rainbowGradient' ||
-      mode === 'rainbowStripes' ||
-      mode === 'neon' ||
-      mode === 'random'
-    ) {
-      return `url(#fill-${this.shape.id})`;
-    }
+    if (mode === 'gradient') return `url(#fill-${this.shape.id})`;
     return this.shape.style.fill;
   }
 
@@ -99,18 +129,19 @@ export class ShapeLayerComponent {
   }
 
   get needsFillDef(): boolean {
-    const mode = this.shape.style.fillMode;
-    return (
-      mode === 'gradient' ||
-      mode === 'rainbowGradient' ||
-      mode === 'rainbowStripes' ||
-      mode === 'neon' ||
-      mode === 'random'
-    );
+    return this.shape.style.fillMode === 'gradient';
   }
 
-  get needsStrokeDef(): boolean {
-    return this.shape.style.strokeMode === 'gradient';
+  get needsGlowFilter(): boolean {
+    return !!this.shape.style.strokeGlow && (this.shape.style.strokeGlow.width ?? 0) > 0;
+  }
+
+  get glowFilterId(): string {
+    return `glow-${this.shape.id}`;
+  }
+
+  get strokeFilterAttr(): string | null {
+    return this.needsGlowFilter ? `url(#${this.glowFilterId})` : null;
   }
 
   get fillGradAngle(): number {
@@ -118,7 +149,7 @@ export class ShapeLayerComponent {
   }
 
   get strokeGradAngle(): number {
-    return this.shape.style.strokeAngle ?? 0;
+    return this.shape.style.strokeGradient?.angle ?? this.shape.style.strokeAngle ?? 0;
   }
 
   get fillGradFrom(): string {
@@ -152,43 +183,21 @@ export class ShapeLayerComponent {
     return this.gradCoords(this.fillGradAngle);
   }
 
-  get strokeGradCoords() {
-    return this.gradCoords(this.strokeGradAngle);
-  }
-
-  get rainbowStops(): { offset: string; color: string }[] {
-    const mode = this.shape.style.fillMode;
-    const colors = [...RAINBOW_COLORS];
-    const n = colors.length;
-    if (mode === 'rainbowStripes') {
-      const stops: { offset: string; color: string }[] = [];
-      for (let i = 0; i < n; i++) {
-        const a = (i / n) * 100;
-        const b = ((i + 1) / n) * 100;
-        stops.push({ offset: `${a.toFixed(2)}%`, color: colors[i] });
-        stops.push({ offset: `${b.toFixed(2)}%`, color: colors[i] });
-      }
-      return stops;
-    }
-    // soft rainbow gradient
-    return colors.map((color, i) => ({
-      offset: `${((i / Math.max(1, n - 1)) * 100).toFixed(2)}%`,
-      color,
-    }));
-  }
-
-  /** Multi-stop fill for neon / random modes. */
-  get paletteStops(): { offset: string; color: string }[] {
+  get fillGradientStops(): { offset: string; color: string }[] {
     const g = this.shape.style.fillGradient;
-    const colors =
-      g?.stops && g.stops.length >= 2
-        ? g.stops
-        : [this.fillGradFrom, this.fillGradTo];
-    const n = colors.length;
-    return colors.map((color, i) => ({
-      offset: `${((i / Math.max(1, n - 1)) * 100).toFixed(2)}%`,
-      color,
-    }));
+    if (!g) {
+      return buildLinearStops(this.fillGradFrom, this.fillGradTo);
+    }
+    return buildStopsFromGradient(g);
+  }
+
+  get strokeGradientStops(): { offset: string; color: string }[] {
+    const g = this.shape.style.strokeGradient;
+    if (g) return buildStopsFromGradient(g);
+    return buildLinearStops(
+      this.shape.style.stroke,
+      this.shape.style.strokeEnd || this.shape.style.stroke,
+    );
   }
 
   get primitives() {
@@ -210,13 +219,18 @@ export class ShapeLayerComponent {
     return regularPolyPointsAttr(this.shape.params as RegularPolygonParams, 6);
   }
 
+  get starPts(): string {
+    if (this.shape.type !== 'star') return '';
+    return starPointsAttr(this.shape.params as StarParams);
+  }
+
   get sunflower() {
     if (this.shape.type !== 'sunflower') return null;
     const p = this.shape.params as SunflowerParams;
     const mode = effectPaletteMode(this.shape.style);
-    const { from, to } = effectPaletteColors(this.shape.style);
-    const palFrom = mode === 'solid' ? this.shape.style.stroke : from;
-    const palTo = mode === 'solid' ? this.shape.style.stroke : to;
+    const pal = effectPaletteColors(this.shape.style);
+    const palFrom = mode === 'solid' ? this.shape.style.stroke : pal.from;
+    const palTo = mode === 'solid' ? this.shape.style.stroke : pal.to;
     return sunflowerLayout(
       p.petals,
       p.radius,
@@ -225,6 +239,7 @@ export class ShapeLayerComponent {
       palFrom,
       palTo,
       mode,
+      { stops: pal.stops, stepped: pal.stepped, steps: pal.steps },
     );
   }
 

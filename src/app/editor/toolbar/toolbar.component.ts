@@ -6,7 +6,7 @@ interface ToolDef {
   id: ToolId;
   icon: string;
   label: string;
-  group: 'select' | 'basic' | 'effect';
+  group: 'select' | 'basic' | 'lines' | 'fx';
   /** Use custom SVG instead of Material icon */
   customIcon?: 'rainbow';
 }
@@ -30,24 +30,29 @@ export class ToolbarComponent {
     { id: 'heart', icon: 'favorite', label: 'Herz', group: 'basic' },
     { id: 'pentagon', icon: 'pentagon', label: 'Fünfeck', group: 'basic' },
     { id: 'hexagon', icon: 'hexagon', label: 'Sechseck', group: 'basic' },
-    { id: 'centerLines', icon: 'flare', label: 'CenterLines', group: 'effect' },
-    { id: 'gradient', icon: 'gradient', label: 'Farbübergang', group: 'effect' },
-    { id: 'gradientCircle', icon: 'blur_circular', label: 'Radialverlauf', group: 'effect' },
-    { id: 'octopus', icon: 'psychiatry', label: 'Octopussy', group: 'effect' },
-    { id: 'multiStar', icon: 'star', label: 'MultiStar', group: 'effect' },
-    { id: 'randomStar', icon: 'shutter_speed', label: 'RandomStar', group: 'effect' },
-    { id: 'circleLine', icon: 'radar', label: 'CircleLine', group: 'effect' },
-    { id: 'circles', icon: 'bubble_chart', label: 'Circles', group: 'effect' },
-    { id: 'sunflower', icon: 'filter_vintage', label: 'Sonnenblume', group: 'effect' },
-    { id: 'firework', icon: 'celebration', label: 'Feuerwerk', group: 'effect' },
+    { id: 'star', icon: 'star', label: 'Stern', group: 'basic' },
+    { id: 'centerLines', icon: 'flare', label: 'CenterLines', group: 'lines' },
+    { id: 'octopus', icon: 'psychiatry', label: 'Octopussy', group: 'lines' },
+    { id: 'multiStar', icon: 'auto_awesome', label: 'MultiStar', group: 'lines' },
+    { id: 'randomStar', icon: 'shutter_speed', label: 'RandomStar', group: 'lines' },
+    { id: 'circleLine', icon: 'radar', label: 'CircleLine', group: 'lines' },
+    { id: 'circles', icon: 'bubble_chart', label: 'Circles', group: 'lines' },
+    { id: 'sunflower', icon: 'filter_vintage', label: 'Sonnenblume', group: 'fx' },
+    { id: 'firework', icon: 'celebration', label: 'Feuerwerk', group: 'fx' },
     {
       id: 'rainbow',
       icon: 'rainbow',
       label: 'Regenbogen',
-      group: 'effect',
+      group: 'fx',
       customIcon: 'rainbow',
     },
   ];
+
+  readonly groups: ToolDef['group'][] = ['select', 'basic', 'lines', 'fx'];
+
+  toolsIn(group: ToolDef['group']): ToolDef[] {
+    return this.tools.filter((t) => t.group === group);
+  }
 
   select(tool: ToolId): void {
     this.drawing.setTool(tool);

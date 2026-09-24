@@ -14,83 +14,117 @@
       <span class="chevron material-symbols-outlined">{{ isCollapsed('stroke') ? 'expand_more' : 'expand_less' }}</span>
     </button>
     @if (!isCollapsed('stroke')) {
-      <label class="row">
-        <span>Modus</span>
-        <select
-          [ngModel]="drawing.strokeMode()"
-          (ngModelChange)="onStrokeMode($event)"
-        >
-          <option value="none">Keine</option>
-          <option value="solid">Farbe</option>
-          <option value="gradient">Verlauf</option>
-        </select>
-      </label>
-      @if (drawing.strokeMode() !== 'none') {
-        <label class="row">
-          <span>Farbe</span>
-          <input
-            type="color"
-            [value]="drawing.strokeColor()"
-            (input)="onStroke($any($event.target).value)"
-          />
-        </label>
-      }
+      <app-style-mode-control
+        [mode]="drawing.strokeMode()"
+        [swatchCss]="strokePreviewCss()"
+        [solidColorValue]="drawing.strokeColor()"
+        (modeChange)="onStrokeMode($event)"
+        (solidColorChange)="onStroke($event)"
+        (openPresetPicker)="openStrokePreset.set(true)"
+      />
       @if (drawing.strokeMode() === 'gradient') {
-        <label class="row">
-          <span>Preset</span>
-          <select
-            [ngModel]="drawing.strokePresetId() ?? ''"
-            (ngModelChange)="onStrokePreset($event)"
-          >
-            <option value="">Benutzerdefiniert</option>
-            @for (p of presets; track p.id) {
-              <option [value]="p.id">{{ p.label }}</option>
-            }
-          </select>
-        </label>
-        <label class="row">
-          <span>Ende</span>
-          <input
-            type="color"
-            [value]="drawing.strokeEndColor()"
-            (input)="onStrokeEnd($any($event.target).value)"
-          />
-        </label>
-        <label class="row">
-          <span>Winkel</span>
-          <input
-            type="range"
-            min="0"
-            max="360"
-            [value]="drawing.strokeAngle()"
-            (input)="onStrokeAngle($any($event.target).value)"
-          />
-          <em>{{ drawing.strokeAngle() }}°</em>
-        </label>
+        <app-preset-picker
+          [presets]="presets"
+          [presetId]="drawing.strokePresetId()"
+          [angle]="drawing.strokeAngle()"
+          [customFrom]="drawing.strokeColor()"
+          [customTo]="drawing.strokeEndColor()"
+          [forceOpen]="openStrokePreset()"
+          (presetIdChange)="onStrokePreset($event)"
+          (rerollPreset)="onStrokeRerollPreset($event)"
+          (forceOpenConsumed)="openStrokePreset.set(false)"
+        />
+        <app-gradient-colors-row
+          [from]="drawing.strokeColor()"
+          [to]="drawing.strokeEndColor()"
+          [showReroll]="showStrokeReroll()"
+          (fromChange)="onStroke($event)"
+          (toChange)="onStrokeEnd($event)"
+          (reroll)="rerollStrokePalette()"
+        />
+        <app-gradient-steps-control
+          [stepped]="drawing.strokeStepped() || strokeStepsReadonly()"
+          [steps]="strokeStepsValue()"
+          [readonly]="strokeStepsReadonly()"
+          [hint]="strokeStepsHint()"
+          (steppedChange)="onStrokeStepped($event)"
+          (stepsChange)="onStrokeSteps($event)"
+        />
+        @if (!hideStrokeAngle()) {
+          <label class="row slider">
+            <span>Winkel</span>
+            <input
+              type="number"
+              class="spin"
+              min="0"
+              max="360"
+              step="1"
+              [ngModel]="drawing.strokeAngle()"
+              (ngModelChange)="onStrokeAngle($event)"
+            />
+            <input
+              type="range"
+              min="0"
+              max="360"
+              step="1"
+              [ngModel]="drawing.strokeAngle()"
+              (ngModelChange)="onStrokeAngle($event)"
+            />
+          </label>
+        }
       }
-      <label class="row">
+      <div class="sub-sep" role="separator"></div>
+      <label class="row slider">
         <span>Dicke</span>
+        <input
+          type="number"
+          class="spin"
+          min="1"
+          max="200"
+          step="1"
+          [ngModel]="drawing.strokeWidth()"
+          (ngModelChange)="onWidth($event)"
+        />
         <input
           type="range"
           min="1"
-          max="24"
-          [value]="drawing.strokeWidth()"
-          (input)="onWidth($any($event.target).value)"
+          max="200"
+          step="1"
+          [ngModel]="drawing.strokeWidth()"
+          (ngModelChange)="onWidth($event)"
         />
-        <em>{{ drawing.strokeWidth() }}px</em>
       </label>
-      <label class="row">
-        <span>Transparenz</span>
+      <label class="row slider">
+        <span>Deckkraft</span>
+        <input
+          type="number"
+          class="spin"
+          min="0"
+          max="100"
+          step="1"
+          [ngModel]="opacityPercent()"
+          (ngModelChange)="onOpacityPercent($event)"
+        />
         <input
           type="range"
           min="0"
-          max="1"
-          step="0.01"
-          [value]="selected()?.style.opacity ?? drawing.opacity()"
-          (input)="onOpacity($any($event.target).value)"
+          max="100"
+          step="1"
+          [ngModel]="opacityPercent()"
+          (ngModelChange)="onOpacityPercent($event)"
         />
-        <em>{{ ((selected()?.style.opacity ?? drawing.opacity()) * 100 | number: '1.0-0') }}%</em>
       </label>
+      <div class="sub-sep" role="separator"></div>
+      <app-stroke-glow-control
+        [enabled]="drawing.strokeGlowEnabled()"
+        [color]="drawing.strokeGlowColor()"
+        [width]="drawing.strokeGlowWidth()"
+        [opacity]="drawing.strokeGlowOpacity()"
+        (enabledChange)="onStrokeGlowEnabled($event)"
+        (colorChange)="onStrokeGlowColor($event)"
+        (widthChange)="onStrokeGlowWidth($event)"
+        (opacityChange)="onStrokeGlowOpacity($event)"
+      />
     }
   </section>
 
@@ -104,32 +138,14 @@
       <span class="chevron material-symbols-outlined">{{ isCollapsed('fill') ? 'expand_more' : 'expand_less' }}</span>
     </button>
     @if (!isCollapsed('fill')) {
-      <label class="row mode-row">
-        <span>Modus</span>
-        <div class="mode-with-swatch">
-          <select
-            [ngModel]="drawing.fillMode()"
-            (ngModelChange)="onFillMode($event)"
-          >
-            <option value="none">Keine</option>
-            <option value="solid">Farbe</option>
-            <option value="gradient">Verlauf</option>
-            <option value="rainbowGradient">Regenbogen-Übergang</option>
-            <option value="rainbowStripes">Regenbogen-Streifen</option>
-            @if (supportsNeonRandomFill()) {
-              <option value="neon">Neon</option>
-              <option value="random">Random</option>
-            }
-          </select>
-          <span
-            class="fill-swatch"
-            [class.is-none]="drawing.fillMode() === 'none'"
-            [style.background]="fillPreviewCss()"
-            [attr.title]="drawing.fillMode()"
-            aria-hidden="true"
-          ></span>
-        </div>
-      </label>
+      <app-style-mode-control
+        [mode]="drawing.fillMode()"
+        [swatchCss]="fillPreviewCss()"
+        [solidColorValue]="drawing.fillColor()"
+        (modeChange)="onFillMode($event)"
+        (solidColorChange)="onFill($event)"
+        (openPresetPicker)="openFillPreset.set(true)"
+      />
       @if (drawing.fillMode() === 'solid') {
         <label class="row">
           <span>Farbe</span>
@@ -141,63 +157,58 @@
         </label>
       }
       @if (drawing.fillMode() === 'gradient') {
-        <label class="row">
-          <span>Preset</span>
-          <select
-            [ngModel]="drawing.fillPresetId() ?? ''"
-            (ngModelChange)="onFillPreset($event)"
-          >
-            <option value="">Benutzerdefiniert</option>
-            @for (p of presets; track p.id) {
-              <option [value]="p.id">{{ p.label }}</option>
-            }
-          </select>
-        </label>
-        <label class="row">
-          <span>Von</span>
-          <input
-            type="color"
-            [value]="drawing.fillGradientFrom()"
-            (input)="onFillGradFrom($any($event.target).value)"
-          />
-        </label>
-        <label class="row">
-          <span>Nach</span>
-          <input
-            type="color"
-            [value]="drawing.fillGradientTo()"
-            (input)="onFillGradTo($any($event.target).value)"
-          />
-        </label>
-      }
-      @if (
-        drawing.fillMode() === 'gradient' ||
-        drawing.fillMode() === 'rainbowGradient' ||
-        drawing.fillMode() === 'rainbowStripes' ||
-        drawing.fillMode() === 'neon' ||
-        drawing.fillMode() === 'random'
-      ) {
-        <label class="row">
+        <app-preset-picker
+          [presets]="presets"
+          [presetId]="drawing.fillPresetId()"
+          [angle]="drawing.fillAngle()"
+          [customFrom]="drawing.fillGradientFrom()"
+          [customTo]="drawing.fillGradientTo()"
+          [forceOpen]="openFillPreset()"
+          (presetIdChange)="onFillPreset($event)"
+          (rerollPreset)="onFillRerollPreset($event)"
+          (forceOpenConsumed)="openFillPreset.set(false)"
+        />
+        <app-gradient-colors-row
+          [from]="drawing.fillGradientFrom()"
+          [to]="drawing.fillGradientTo()"
+          [showReroll]="showFillReroll()"
+          (fromChange)="onFillGradFrom($event)"
+          (toChange)="onFillGradTo($event)"
+          (reroll)="rerollFillPalette()"
+        />
+        <app-gradient-steps-control
+          [stepped]="drawing.fillStepped() || fillStepsReadonly()"
+          [steps]="fillStepsValue()"
+          [readonly]="fillStepsReadonly()"
+          [hint]="fillStepsHint()"
+          (steppedChange)="onFillStepped($event)"
+          (stepsChange)="onFillSteps($event)"
+        />
+        <label class="row slider">
           <span>Winkel</span>
+          <input
+            type="number"
+            class="spin"
+            min="0"
+            max="360"
+            step="1"
+            [ngModel]="drawing.fillAngle()"
+            (ngModelChange)="onFillAngle($event)"
+          />
           <input
             type="range"
             min="0"
             max="360"
-            [value]="drawing.fillAngle()"
-            (input)="onFillAngle($any($event.target).value)"
+            step="1"
+            [ngModel]="drawing.fillAngle()"
+            (ngModelChange)="onFillAngle($event)"
           />
-          <em>{{ drawing.fillAngle() }}°</em>
         </label>
-      }
-      @if (drawing.fillMode() === 'neon' || drawing.fillMode() === 'random') {
-        <button type="button" class="ghost" (click)="rerollFillPalette()">
-          Neu würfeln
-        </button>
       }
     }
   </section>
 
-  @if (drawing.canGroup() || drawing.canUngroup() || drawing.selectedIds().length > 0) {
+  @if (drawing.canGroup() || drawing.canUngroup()) {
     <section
       class="block fade-in g-group"
       [class.collapsed]="isCollapsed('group')"
@@ -208,11 +219,6 @@
         <span class="chevron material-symbols-outlined">{{ isCollapsed('group') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('group')) {
-        @if (drawing.selectedIds().length > 0) {
-          <button type="button" class="action-btn" (click)="drawing.duplicateSelected()">
-            Duplizieren
-          </button>
-        }
         @if (drawing.canGroup()) {
           <button type="button" class="action-btn" (click)="drawing.groupSelected()">
             Gruppieren
@@ -241,337 +247,356 @@
         <span class="chevron material-symbols-outlined">{{ isCollapsed('transform') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('transform')) {
-        <label class="row">
+        <label class="row slider">
           <span>Rotation</span>
+          <input
+            type="number"
+            class="spin"
+            min="0"
+            max="360"
+            step="1"
+            [ngModel]="s.transform.rotation"
+            (ngModelChange)="onRotation($event)"
+          />
           <input
             type="range"
             min="0"
             max="360"
-            [value]="s.transform.rotation"
-            (input)="onRotation($any($event.target).value)"
+            step="1"
+            [ngModel]="s.transform.rotation"
+            (ngModelChange)="onRotation($event)"
           />
-          <em>{{ s.transform.rotation | number: '1.0-0' }}°</em>
         </label>
-        <label class="row">
+        <label class="row slider">
           <span>Skalierung</span>
+          <input
+            type="number"
+            class="spin"
+            min="0.1"
+            max="4"
+            step="0.05"
+            [ngModel]="s.transform.scaleX"
+            (ngModelChange)="onScale($event)"
+          />
           <input
             type="range"
             min="0.1"
             max="4"
             step="0.05"
-            [value]="s.transform.scaleX"
-            (input)="onScale($any($event.target).value)"
+            [ngModel]="s.transform.scaleX"
+            (ngModelChange)="onScale($event)"
           />
-          <em>{{ s.transform.scaleX | number: '1.0-2' }}×</em>
         </label>
       }
     </section>
+  }
 
-    @if (s.type === 'octopus') {
-      <section
-        class="block fade-in g-octopus"
-        [class.collapsed]="isCollapsed('octopus')"
-        [class.is-focus]="isFocusBlock('octopus')"
-      >
-        <button type="button" class="block-toggle" (click)="toggle('octopus')">
-          <h3>Octopussy</h3>
-          <span class="chevron material-symbols-outlined">{{ isCollapsed('octopus') ? 'expand_more' : 'expand_less' }}</span>
-        </button>
-        @if (!isCollapsed('octopus')) {
-          <label class="row">
-            <span>Arme</span>
-            <input
-              type="number"
-              min="1"
-              max="24"
-              [ngModel]="asOctopus(s.params).arms"
-              (ngModelChange)="updateParam('arms', $event)"
-            />
-          </label>
-          <label class="row">
-            <span>Kreise</span>
-            <input
-              type="number"
-              min="1"
-              max="120"
-              [ngModel]="asOctopus(s.params).circles"
-              (ngModelChange)="updateParam('circles', $event)"
-            />
-          </label>
-          <label class="row">
-            <span>Kurve</span>
-            <input
-              type="number"
-              step="0.5"
-              [ngModel]="asOctopus(s.params).curve"
-              (ngModelChange)="updateParam('curve', $event)"
-            />
-          </label>
-        }
-      </section>
-    }
-
-    @if (s.type === 'multiStar') {
-      <section
-        class="block fade-in g-multistar"
-        [class.collapsed]="isCollapsed('multiStar')"
-        [class.is-focus]="isFocusBlock('multiStar')"
-      >
-        <button type="button" class="block-toggle" (click)="toggle('multiStar')">
-          <h3>MultiStar</h3>
-          <span class="chevron material-symbols-outlined">{{ isCollapsed('multiStar') ? 'expand_more' : 'expand_less' }}</span>
-        </button>
-        @if (!isCollapsed('multiStar')) {
-          <label class="row">
-            <span>Modus</span>
-            <select
-              [ngModel]="asMulti(s.params).mode"
-              (ngModelChange)="updateParam('mode', $event)"
-            >
-              <option [ngValue]="1">Kreuz</option>
-              <option [ngValue]="2">Achsen</option>
-              <option [ngValue]="3">Fächer</option>
-              <option [ngValue]="4">N-Arme</option>
-            </select>
-          </label>
-          <label class="row">
-            <span>Arme</span>
-            <input
-              type="number"
-              min="2"
-              max="24"
-              [ngModel]="asMulti(s.params).arms"
-              (ngModelChange)="updateParam('arms', $event)"
-            />
-          </label>
-          <label class="row">
-            <span>Stufen</span>
-            <input
-              type="number"
-              min="1"
-              max="80"
-              [ngModel]="asMulti(s.params).stages"
-              (ngModelChange)="updateParam('stages', $event)"
-            />
-          </label>
-          <label class="row">
-            <span>Schritt</span>
-            <input
-              type="number"
-              min="1"
-              max="40"
-              [ngModel]="asMulti(s.params).step"
-              (ngModelChange)="updateParam('step', $event)"
-            />
-          </label>
-        }
-      </section>
-    }
-
-    @if (s.type === 'randomStar') {
-      <section
-        class="block fade-in g-randomstar"
-        [class.collapsed]="isCollapsed('randomStar')"
-        [class.is-focus]="isFocusBlock('randomStar')"
-      >
-        <button type="button" class="block-toggle" (click)="toggle('randomStar')">
-          <h3>RandomStar</h3>
-          <span class="chevron material-symbols-outlined">{{ isCollapsed('randomStar') ? 'expand_more' : 'expand_less' }}</span>
-        </button>
-        @if (!isCollapsed('randomStar')) {
-          <label class="row">
-            <span>Arme</span>
-            <input
-              type="number"
-              min="10"
-              max="2000"
-              [ngModel]="asRandom(s.params).arms"
-              (ngModelChange)="updateParam('arms', $event)"
-            />
-          </label>
-          <label class="row">
-            <span>Radius</span>
-            <input
-              type="number"
-              min="10"
-              [ngModel]="asRandom(s.params).radius"
-              (ngModelChange)="updateParam('radius', $event)"
-            />
-          </label>
-        }
-      </section>
-    }
-
-    @if (s.type === 'circleLine') {
-      <section
-        class="block fade-in g-circleline"
-        [class.collapsed]="isCollapsed('circleLine')"
-        [class.is-focus]="isFocusBlock('circleLine')"
-      >
-        <button type="button" class="block-toggle" (click)="toggle('circleLine')">
-          <h3>CircleLine</h3>
-          <span class="chevron material-symbols-outlined">{{ isCollapsed('circleLine') ? 'expand_more' : 'expand_less' }}</span>
-        </button>
-        @if (!isCollapsed('circleLine')) {
-          <label class="row">
-            <span>Arme</span>
-            <input
-              type="number"
-              min="3"
-              max="720"
-              [ngModel]="asCircleLine(s.params).arms"
-              (ngModelChange)="updateParam('arms', $event)"
-            />
-          </label>
-        }
-      </section>
-    }
-
-    @if (s.type === 'circles') {
-      <section
-        class="block fade-in g-circles"
-        [class.collapsed]="isCollapsed('circles')"
-        [class.is-focus]="isFocusBlock('circles')"
-      >
-        <button type="button" class="block-toggle" (click)="toggle('circles')">
-          <h3>Circles</h3>
-          <span class="chevron material-symbols-outlined">{{ isCollapsed('circles') ? 'expand_more' : 'expand_less' }}</span>
-        </button>
-        @if (!isCollapsed('circles')) {
-          <label class="row">
-            <span>Anzahl</span>
-            <input
-              type="number"
-              min="1"
-              max="80"
-              [ngModel]="asCircles(s.params).count"
-              (ngModelChange)="updateParam('count', $event)"
-            />
-          </label>
-          <label class="row">
-            <span>Wachstum</span>
-            <input
-              type="number"
-              step="0.05"
-              min="1"
-              max="2"
-              [ngModel]="asCircles(s.params).sizeMultiply"
-              (ngModelChange)="updateParam('sizeMultiply', $event)"
-            />
-          </label>
-        }
-      </section>
-    }
-
-    @if (s.type === 'sunflower') {
-      <section
-        class="block fade-in g-sunflower"
-        [class.collapsed]="isCollapsed('sunflower')"
-        [class.is-focus]="isFocusBlock('sunflower')"
-      >
-        <button type="button" class="block-toggle" (click)="toggle('sunflower')">
-          <h3>Sonnenblume</h3>
-          <span class="chevron material-symbols-outlined">{{ isCollapsed('sunflower') ? 'expand_more' : 'expand_less' }}</span>
-        </button>
-        @if (!isCollapsed('sunflower')) {
-          <label class="row">
-            <span>Blütenblätter</span>
-            <input
-              type="number"
-              min="6"
-              max="48"
-              [ngModel]="asSunflower(s.params).petals"
-              (ngModelChange)="updateParam('petals', $event)"
-            />
-          </label>
-          <label class="row">
-            <span>Samenringe</span>
-            <input
-              type="number"
-              min="1"
-              max="12"
-              [ngModel]="asSunflower(s.params).seedRings"
-              (ngModelChange)="updateParam('seedRings', $event)"
-            />
-          </label>
-        }
-      </section>
-    }
-
-    @if (s.type === 'rainbow') {
-      <section
-        class="block fade-in g-rainbow"
-        [class.collapsed]="isCollapsed('rainbow')"
-        [class.is-focus]="isFocusBlock('rainbow')"
-      >
-        <button type="button" class="block-toggle" (click)="toggle('rainbow')">
-          <h3>Regenbogen</h3>
-          <span class="chevron material-symbols-outlined">{{ isCollapsed('rainbow') ? 'expand_more' : 'expand_less' }}</span>
-        </button>
-        @if (!isCollapsed('rainbow')) {
-          <label class="row">
-            <span>Darstellung</span>
-            <select
-              [ngModel]="asRainbow(s.params).mode"
-              (ngModelChange)="setRainbowMode($event)"
-            >
-              <option value="gradient">Farbübergang</option>
-              <option value="stripes">Farbstreifen</option>
-            </select>
-          </label>
-          <label class="row">
-            <span>Bandbreite</span>
-            <input
-              type="range"
-              min="8"
-              max="120"
-              [ngModel]="asRainbow(s.params).bandWidth"
-              (ngModelChange)="updateParam('bandWidth', $event)"
-            />
-            <em>{{ asRainbow(s.params).bandWidth | number: '1.0-0' }}px</em>
-          </label>
-        }
-      </section>
-    }
-  } @else if (!showFirework()) {
+  @if (shows('star')) {
     <section
-      class="block muted g-defaults"
-      [class.collapsed]="isCollapsed('defaults')"
-      [class.is-focus]="isFocusBlock('defaults')"
+      class="block fade-in g-star"
+      [class.collapsed]="isCollapsed('star')"
+      [class.is-focus]="isFocusBlock('star')"
     >
-      <button type="button" class="block-toggle" (click)="toggle('defaults')">
-        <h3>Defaults</h3>
-        <span class="chevron material-symbols-outlined">{{ isCollapsed('defaults') ? 'expand_more' : 'expand_less' }}</span>
+      <button type="button" class="block-toggle" (click)="toggle('star')">
+        <h3>Stern</h3>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('star') ? 'expand_more' : 'expand_less' }}</span>
       </button>
-      @if (!isCollapsed('defaults')) {
-        <p>Kein Objekt ausgewählt. Effekt-Defaults für neue Formen:</p>
-        <label class="row">
-          <span>Octopus-Arme</span>
+      @if (!isCollapsed('star')) {
+        <label class="row slider">
+          <span>Zacken</span>
           <input
             type="number"
-            [ngModel]="drawing.effectParams().octopus.arms"
-            (ngModelChange)="updateEffectDefault('octopus', 'arms', $event)"
+            class="spin"
+            min="3"
+            max="24"
+            step="1"
+            [ngModel]="starParams().points"
+            (ngModelChange)="patchToolParam('star', 'points', $event)"
+          />
+          <input
+            type="range"
+            min="3"
+            max="24"
+            step="1"
+            [ngModel]="starParams().points"
+            (ngModelChange)="patchToolParam('star', 'points', $event)"
           />
         </label>
+      }
+    </section>
+  }
+
+  @if (shows('octopus')) {
+    <section
+      class="block fade-in g-octopus"
+      [class.collapsed]="isCollapsed('octopus')"
+      [class.is-focus]="isFocusBlock('octopus')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('octopus')">
+        <h3>Octopussy</h3>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('octopus') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('octopus')) {
         <label class="row">
-          <span>MultiStar-Modus</span>
+          <span>Arme</span>
           <input
             type="number"
             min="1"
-            max="4"
-            [ngModel]="drawing.effectParams().multiStar.mode"
-            (ngModelChange)="updateEffectDefault('multiStar', 'mode', $event)"
+            max="24"
+            [ngModel]="octParams().arms"
+            (ngModelChange)="patchToolParam('octopus', 'arms', $event)"
           />
         </label>
         <label class="row">
-          <span>Regenbogen</span>
+          <span>Kreise</span>
+          <input
+            type="number"
+            min="1"
+            max="120"
+            [ngModel]="octParams().circles"
+            (ngModelChange)="patchToolParam('octopus', 'circles', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Kurve</span>
+          <input
+            type="number"
+            step="0.5"
+            [ngModel]="octParams().curve"
+            (ngModelChange)="patchToolParam('octopus', 'curve', $event)"
+          />
+        </label>
+      }
+    </section>
+  }
+
+  @if (shows('multiStar')) {
+    <section
+      class="block fade-in g-multistar"
+      [class.collapsed]="isCollapsed('multiStar')"
+      [class.is-focus]="isFocusBlock('multiStar')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('multiStar')">
+        <h3>MultiStar</h3>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('multiStar') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('multiStar')) {
+        <label class="row">
+          <span>Modus</span>
           <select
-            [ngModel]="drawing.effectParams().rainbow.mode"
+            [ngModel]="multiParams().mode"
+            (ngModelChange)="patchToolParam('multiStar', 'mode', $event)"
+          >
+            <option [ngValue]="1">Kreuz</option>
+            <option [ngValue]="2">Achsen</option>
+            <option [ngValue]="3">Fächer</option>
+            <option [ngValue]="4">N-Arme</option>
+          </select>
+        </label>
+        <label class="row">
+          <span>Arme</span>
+          <input
+            type="number"
+            min="2"
+            max="24"
+            [ngModel]="multiParams().arms"
+            (ngModelChange)="patchToolParam('multiStar', 'arms', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Stufen</span>
+          <input
+            type="number"
+            min="1"
+            max="80"
+            [ngModel]="multiParams().stages"
+            (ngModelChange)="patchToolParam('multiStar', 'stages', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Schritt</span>
+          <input
+            type="number"
+            min="1"
+            max="40"
+            [ngModel]="multiParams().step"
+            (ngModelChange)="patchToolParam('multiStar', 'step', $event)"
+          />
+        </label>
+      }
+    </section>
+  }
+
+  @if (shows('randomStar')) {
+    <section
+      class="block fade-in g-randomstar"
+      [class.collapsed]="isCollapsed('randomStar')"
+      [class.is-focus]="isFocusBlock('randomStar')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('randomStar')">
+        <h3>RandomStar</h3>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('randomStar') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('randomStar')) {
+        <label class="row">
+          <span>Arme</span>
+          <input
+            type="number"
+            min="10"
+            max="2000"
+            [ngModel]="randomParams().arms"
+            (ngModelChange)="patchToolParam('randomStar', 'arms', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Radius</span>
+          <input
+            type="number"
+            min="10"
+            [ngModel]="randomParams().radius"
+            (ngModelChange)="patchToolParam('randomStar', 'radius', $event)"
+          />
+        </label>
+      }
+    </section>
+  }
+
+  @if (shows('circleLine')) {
+    <section
+      class="block fade-in g-circleline"
+      [class.collapsed]="isCollapsed('circleLine')"
+      [class.is-focus]="isFocusBlock('circleLine')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('circleLine')">
+        <h3>CircleLine</h3>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('circleLine') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('circleLine')) {
+        <label class="row">
+          <span>Arme</span>
+          <input
+            type="number"
+            min="3"
+            max="720"
+            [ngModel]="circleLineParams().arms"
+            (ngModelChange)="patchToolParam('circleLine', 'arms', $event)"
+          />
+        </label>
+      }
+    </section>
+  }
+
+  @if (shows('circles')) {
+    <section
+      class="block fade-in g-circles"
+      [class.collapsed]="isCollapsed('circles')"
+      [class.is-focus]="isFocusBlock('circles')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('circles')">
+        <h3>Circles</h3>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('circles') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('circles')) {
+        <label class="row">
+          <span>Anzahl</span>
+          <input
+            type="number"
+            min="1"
+            max="80"
+            [ngModel]="circlesParams().count"
+            (ngModelChange)="patchToolParam('circles', 'count', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Wachstum</span>
+          <input
+            type="number"
+            step="0.05"
+            min="1"
+            max="2"
+            [ngModel]="circlesParams().sizeMultiply"
+            (ngModelChange)="patchToolParam('circles', 'sizeMultiply', $event)"
+          />
+        </label>
+      }
+    </section>
+  }
+
+  @if (shows('sunflower')) {
+    <section
+      class="block fade-in g-sunflower"
+      [class.collapsed]="isCollapsed('sunflower')"
+      [class.is-focus]="isFocusBlock('sunflower')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('sunflower')">
+        <h3>Sonnenblume</h3>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('sunflower') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('sunflower')) {
+        <label class="row">
+          <span>Blütenblätter</span>
+          <input
+            type="number"
+            min="6"
+            max="48"
+            [ngModel]="sunflowerParams().petals"
+            (ngModelChange)="patchToolParam('sunflower', 'petals', $event)"
+          />
+        </label>
+        <label class="row">
+          <span>Samenringe</span>
+          <input
+            type="number"
+            min="1"
+            max="12"
+            [ngModel]="sunflowerParams().seedRings"
+            (ngModelChange)="patchToolParam('sunflower', 'seedRings', $event)"
+          />
+        </label>
+      }
+    </section>
+  }
+
+  @if (shows('rainbow')) {
+    <section
+      class="block fade-in g-rainbow"
+      [class.collapsed]="isCollapsed('rainbow')"
+      [class.is-focus]="isFocusBlock('rainbow')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('rainbow')">
+        <h3>Regenbogen</h3>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('rainbow') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('rainbow')) {
+        <label class="row">
+          <span>Darstellung</span>
+          <select
+            [ngModel]="rainbowParams().mode"
             (ngModelChange)="setRainbowMode($event)"
           >
             <option value="gradient">Farbübergang</option>
             <option value="stripes">Farbstreifen</option>
           </select>
+        </label>
+        <label class="row slider">
+          <span>Bandbreite</span>
+          <input
+            type="number"
+            class="spin"
+            min="8"
+            max="120"
+            step="1"
+            [ngModel]="rainbowParams().bandWidth"
+            (ngModelChange)="patchToolParam('rainbow', 'bandWidth', $event)"
+          />
+          <input
+            type="range"
+            min="8"
+            max="120"
+            step="1"
+            [ngModel]="rainbowParams().bandWidth"
+            (ngModelChange)="patchToolParam('rainbow', 'bandWidth', $event)"
+          />
         </label>
       }
     </section>
@@ -588,9 +613,6 @@
         <span class="chevron material-symbols-outlined">{{ isCollapsed('firework') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('firework')) {
-        @if (!selected()) {
-          <p class="hint">Defaults für neue Feuerwerke — sofort wirksam beim Zeichnen.</p>
-        }
         <label class="row">
           <span>Variante</span>
           <select
@@ -625,8 +647,17 @@
             <option value="aquaMagenta">Aqua / Magenta</option>
           </select>
         </label>
-        <label class="row">
+        <label class="row slider">
           <span>Leuchtspuren</span>
+          <input
+            type="number"
+            class="spin"
+            [min]="fwTrailLimits().min"
+            [max]="fwTrailLimits().max"
+            step="1"
+            [ngModel]="fwParams().trails"
+            (ngModelChange)="onFireworkTrails($event)"
+          />
           <input
             type="range"
             [min]="fwTrailLimits().min"
@@ -635,10 +666,18 @@
             [ngModel]="fwParams().trails"
             (ngModelChange)="onFireworkTrails($event)"
           />
-          <em>{{ fwParams().trails }}</em>
         </label>
-        <label class="row">
+        <label class="row slider">
           <span>Wind</span>
+          <input
+            type="number"
+            class="spin"
+            min="-1"
+            max="1"
+            step="0.05"
+            [ngModel]="fwParams().wind"
+            (ngModelChange)="onFireworkWind($event)"
+          />
           <input
             type="range"
             min="-1"
@@ -647,7 +686,6 @@
             [ngModel]="fwParams().wind"
             (ngModelChange)="onFireworkWind($event)"
           />
-          <em>{{ fwParams().wind | number: '1.0-2' }}</em>
         </label>
         <label class="row check">
           <span>Punktspuren</span>
@@ -684,7 +722,22 @@
           >
             <span class="drag-handle material-symbols-outlined">drag_indicator</span>
             <span class="layer-label">{{ typeLabel(entry.shape) }}</span>
+            <span
+              class="layer-chip"
+              [class.layer-chip--low]="layerComplexityClass(entry.shape) === 'layer-chip--low'"
+              [class.layer-chip--mid]="layerComplexityClass(entry.shape) === 'layer-chip--mid'"
+              [class.layer-chip--high]="layerComplexityClass(entry.shape) === 'layer-chip--high'"
+              [attr.title]="layerComplexity(entry.shape) + ' Elemente'"
+            >{{ layerComplexity(entry.shape) }}</span>
             <span class="layer-id">{{ typeNumber(entry.typeIndex) }}</span>
+            <button
+              type="button"
+              class="layer-dup"
+              title="Duplizieren"
+              (click)="duplicateLayer(entry.shape.id, $event)"
+            >
+              <span class="material-symbols-outlined">content_copy</span>
+            </button>
           </li>
         } @empty {
           <li class="layer-empty">Keine Elemente</li>

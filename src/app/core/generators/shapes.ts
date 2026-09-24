@@ -2,6 +2,23 @@ import { Point2D } from '../models/shape';
 import { createRng, rotatePos, rotateXY } from '../math/polar';
 import { colorAt, PaletteMode } from '../style/presets';
 
+export interface PaletteExtras {
+  stops?: string[];
+  stepped?: boolean;
+  steps?: number;
+}
+
+function palColor(
+  i: number,
+  n: number,
+  mode: PaletteMode,
+  from: string,
+  to: string,
+  extra?: PaletteExtras,
+): string {
+  return colorAt(i, n, mode, from, to, extra?.stops, extra?.stepped, extra?.steps);
+}
+
 export interface GenLine {
   kind: 'line';
   x1: number;
@@ -43,6 +60,7 @@ export function generateOctopus(
   startColor: string,
   endColor: string,
   paletteMode: PaletteMode = 'gradient',
+  extra?: PaletteExtras,
 ): GenPrimitive[] {
   const out: GenPrimitive[] = [];
   const drehWinkel = 360 / Math.max(1, arms);
@@ -59,7 +77,7 @@ export function generateOctopus(
     });
   } else {
     out.push(
-      ...generateGradientCircle(0, 0, radiusX, radiusY, startColor, endColor, paletteMode),
+      ...generateGradientCircle(0, 0, radiusX, radiusY, startColor, endColor, paletteMode, extra),
     );
   }
 
@@ -89,6 +107,7 @@ export function generateOctopus(
             startColor,
             endColor,
             paletteMode,
+            extra,
           ),
         );
       }
@@ -105,6 +124,7 @@ export function generateGradientCircle(
   startColor: string,
   endColor: string,
   mode: PaletteMode = 'gradient',
+  extra?: PaletteExtras,
 ): GenEllipse[] {
   const out: GenEllipse[] = [];
   const mradius = Math.max(xr, yr);
@@ -125,7 +145,7 @@ export function generateGradientCircle(
       cy: ypos + yr / 2,
       rx: i * xrel,
       ry: i * yrel,
-      fill: colorAt(k, n, mode, startColor, endColor),
+      fill: palColor(k, n, mode, startColor, endColor, extra),
     });
   }
   return out;
@@ -138,6 +158,7 @@ export function generateCircleLine(
   startColor: string,
   endColor: string = startColor,
   mode: PaletteMode = 'solid',
+  extra?: PaletteExtras,
 ): GenLine[] {
   const out: GenLine[] = [];
   const rotAngle = 360 / Math.max(1, arms);
@@ -150,7 +171,7 @@ export function generateCircleLine(
       y1: 0,
       x2: p.x,
       y2: p.y,
-      stroke: colorAt(i, n, mode, startColor, endColor),
+      stroke: palColor(i, n, mode, startColor, endColor, extra),
     });
   }
   return out;
@@ -168,6 +189,7 @@ export function generateCircles(
   endColor: string,
   paletteMode: PaletteMode = 'gradient',
   filled = false,
+  extra?: PaletteExtras,
 ): GenEllipse[] {
   const out: GenEllipse[] = [];
   let sizeW = w;
@@ -176,7 +198,7 @@ export function generateCircles(
 
   for (let i = 0; i < count; i++) {
     const newpos = rotatePos(Math.round(i * w * offset), startAngle);
-    const color = colorAt(i, n, paletteMode, startColor, endColor);
+    const color = palColor(i, n, paletteMode, startColor, endColor, extra);
 
     if (mode === 1) {
       const rx = sizeMultiply * w;
@@ -219,6 +241,7 @@ export function generateRandomStar(
   startColor: string,
   endColor: string = startColor,
   mode: PaletteMode = 'solid',
+  extra?: PaletteExtras,
 ): GenLine[] {
   const rng = createRng(seed);
   const out: GenLine[] = [];
@@ -233,7 +256,7 @@ export function generateRandomStar(
       y1: 0,
       x2: p.x,
       y2: p.y,
-      stroke: colorAt(i, n, mode, startColor, endColor),
+      stroke: palColor(i, n, mode, startColor, endColor, extra),
     });
   }
   return out;
@@ -249,11 +272,12 @@ export function generateMultiStar(
   startColor: string,
   endColor: string,
   paletteMode: PaletteMode = 'gradient',
+  extra?: PaletteExtras,
 ): GenLine[] {
   const out: GenLine[] = [];
   const rotAngle = 360 / Math.max(1, arms);
   const n = Math.max(1, stages);
-  const colorFor = (i: number) => colorAt(i, n, paletteMode, startColor, endColor);
+  const colorFor = (i: number) => palColor(i, n, paletteMode, startColor, endColor, extra);
 
   if (mode === 1) {
     for (let i = stages; i > 0; i--) {
@@ -339,6 +363,27 @@ export function regularPolygonPoints(
   return out;
 }
 
+/** Star polygon: alternating outer/inner radius around the center. */
+export function starPolygonPoints(
+  cx: number,
+  cy: number,
+  outerR: number,
+  innerR: number,
+  points: number,
+  rotationDeg = -90,
+): Point2D[] {
+  const n = Math.max(3, Math.floor(points));
+  const out: Point2D[] = [];
+  const step = 360 / (n * 2);
+  for (let i = 0; i < n * 2; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const a = rotationDeg + i * step;
+    const p = rotatePos(r, a);
+    out.push({ x: cx + p.x, y: cy + p.y });
+  }
+  return out;
+}
+
 /** Heart path fitted into axis-aligned box. */
 export function heartPath(x: number, y: number, w: number, h: number): string {
   if (w < 0.5 || h < 0.5) return '';
@@ -366,6 +411,7 @@ export function sunflowerLayout(
   startColor: string,
   endColor: string,
   mode: PaletteMode = 'gradient',
+  extra?: PaletteExtras,
 ): {
   petals: { angle: number; color: string }[];
   petalCy: number;
@@ -384,7 +430,7 @@ export function sunflowerLayout(
   for (let i = 0; i < nPetals; i++) {
     petalList.push({
       angle: startAngle + (i * 360) / nPetals,
-      color: colorAt(i, nPetals, mode, startColor, endColor),
+      color: palColor(i, nPetals, mode, startColor, endColor, extra),
     });
   }
 
@@ -399,12 +445,13 @@ export function sunflowerLayout(
       cy: 0,
       rx: rr,
       ry: rr,
-      fill: colorAt(
+      fill: palColor(
         rings - ring,
         rings + 1,
-        mode === 'solid' ? 'solid' : mode === 'rainbowStripes' ? 'rainbowStripes' : 'gradient',
+        mode,
         endColor,
         startColor,
+        extra,
       ),
     });
   }

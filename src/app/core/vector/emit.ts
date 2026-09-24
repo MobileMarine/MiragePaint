@@ -1,5 +1,6 @@
 import {
   EllipseParams,
+  FreehandParams,
   GroupParams,
   LineParams,
   Point2D,
@@ -13,7 +14,8 @@ import {
 } from '../models/shape';
 import { PrimitiveFit } from './fit';
 import { RegionColor } from './gradient';
-import { shapePivot, transformAttr } from '../render/geometry';
+import { freehandStrokeSegments, shapePivot, transformAttr } from '../render/geometry';
+import { buildStopsFromGradient } from '../style/presets';
 
 export interface FittedRegion {
   fit: PrimitiveFit;
@@ -188,16 +190,7 @@ function shapeToSvgFragment(
 
   let fill = shape.style.fill;
   const fillMode = shape.style.fillMode;
-  if (
-    shape.style.fillGradient &&
-    !outlinesOnly &&
-    (fillMode === 'gradient' ||
-      fillMode === 'rainbowGradient' ||
-      fillMode === 'rainbowStripes' ||
-      fillMode === 'neon' ||
-      fillMode === 'random' ||
-      (!fillMode && shape.style.fillGradient))
-  ) {
+  if (shape.style.fillGradient && !outlinesOnly && fillMode === 'gradient') {
     const id = `fg${idx}`;
     const g = shape.style.fillGradient;
     const rad = (g.angle * Math.PI) / 180;
@@ -205,26 +198,69 @@ function shapeToSvgFragment(
     const y1 = 50 - Math.sin(rad) * 50;
     const x2 = 50 + Math.cos(rad) * 50;
     const y2 = 50 + Math.sin(rad) * 50;
-    const stops =
-      g.stops && g.stops.length >= 2
-        ? g.stops
-        : [g.from, g.to];
+    const stops = buildStopsFromGradient(g);
     const stopXml = stops
-      .map((c, i) => {
-        const off = stops.length <= 1 ? 0 : (i / (stops.length - 1)) * 100;
-        return `<stop offset="${off}%" stop-color="${escapeAttr(c)}"/>`;
-      })
+      .map((s) => `<stop offset="${s.offset}" stop-color="${escapeAttr(s.color)}"/>`)
       .join('');
     defs.push(
       `<linearGradient id="${id}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">${stopXml}</linearGradient>`,
     );
     fill = `url(#${id})`;
   }
+
+  let stroke = shape.style.stroke;
+  if (shape.style.strokeMode === 'gradient' && !outlinesOnly) {
+    if (shape.type === 'freehand') {
+      // Segments drawn in renderGeom — skip planar gradient def
+      stroke = shape.style.stroke;
+    } else {
+      const id = `sg${idx}`;
+      const g = shape.style.strokeGradient ?? {
+        angle: shape.style.strokeAngle ?? 0,
+        from: shape.style.stroke,
+        to: shape.style.strokeEnd ?? shape.style.stroke,
+      };
+      const stops = buildStopsFromGradient(g);
+      const stopXml = stops
+        .map((s) => `<stop offset="${s.offset}" stop-color="${escapeAttr(s.color)}"/>`)
+        .join('');
+      if (shape.type === 'line') {
+        const p = shape.params as LineParams;
+        defs.push(
+          `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${p.x1}" y1="${p.y1}" x2="${p.x2}" y2="${p.y2}">${stopXml}</linearGradient>`,
+        );
+      } else {
+        const rad = (g.angle * Math.PI) / 180;
+        const x1 = 50 - Math.cos(rad) * 50;
+        const y1 = 50 - Math.sin(rad) * 50;
+        const x2 = 50 + Math.cos(rad) * 50;
+        const y2 = 50 + Math.sin(rad) * 50;
+        defs.push(
+          `<linearGradient id="${id}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">${stopXml}</linearGradient>`,
+        );
+      }
+      stroke = `url(#${id})`;
+    }
+  }
+
+  if (shape.style.strokeGlow && !outlinesOnly) {
+    const glow = shape.style.strokeGlow;
+    const fid = `glow${idx}`;
+    defs.push(
+      `<filter id="${fid}" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">` +
+        `<feGaussianBlur in="SourceGraphic" stdDeviation="${(glow.width / 3).toFixed(2)}" result="blur"/>` +
+        `<feFlood flood-color="${escapeAttr(glow.color)}" flood-opacity="${glow.opacity}" result="color"/>` +
+        `<feComposite in="color" in2="blur" operator="in" result="glow"/>` +
+        `<feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`,
+    );
+  }
+
   if (fillMode === 'none') fill = 'none';
   if (fillMode === 'solid') fill = shape.style.fill;
+  if (shape.style.strokeMode === 'none') stroke = 'none';
 
   if (outlinesOnly) {
-    const stroke =
+    const outlineStroke =
       shape.style.stroke && shape.style.stroke !== 'none'
         ? shape.style.stroke
         : fill && fill !== 'none' && !fill.startsWith('url')
@@ -232,12 +268,12 @@ function shapeToSvgFragment(
           : shape.style.fillGradient?.from ?? '#1a1a1a';
     fill = 'none';
     const sw = Math.max(1, shape.style.strokeWidth || 1.25);
-    return wrap(renderGeom(shape, 'none', stroke, sw), tf, opAttr);
+    return wrap(renderGeom(shape, 'none', outlineStroke, sw), tf, opAttr);
   }
 
-  const stroke = shape.style.stroke;
   const sw = shape.style.strokeWidth;
-  return wrap(renderGeom(shape, fill, stroke, sw), tf, opAttr);
+  const filterAttr = shape.style.strokeGlow ? ` filter="url(#glow${idx})"` : '';
+  return wrap(renderGeom(shape, fill, stroke, sw), tf, opAttr + filterAttr);
 }
 
 function wrap(inner: string, tf: string, opAttr: string): string {
@@ -263,6 +299,22 @@ function renderGeom(shape: Shape, fill: string, stroke: string, sw: number): str
     case 'line': {
       const p = shape.params as LineParams;
       return `<line x1="${p.x1}" y1="${p.y1}" x2="${p.x2}" y2="${p.y2}" stroke="${escapeAttr(stroke || '#1a1a1a')}" stroke-width="${sw || 2}" stroke-linecap="round"/>`;
+    }
+    case 'freehand': {
+      const segs = freehandStrokeSegments(shape.params as FreehandParams, shape.style);
+      if (segs) {
+        return segs
+          .map(
+            (s) =>
+              `<path d="${escapeAttr(s.d)}" fill="none" stroke="${escapeAttr(s.color)}" stroke-width="${sw || 2}" stroke-linecap="round" stroke-linejoin="round"/>`,
+          )
+          .join('');
+      }
+      const pts = (shape.params as FreehandParams).points;
+      if (pts.length < 2) return '';
+      const d =
+        `M ${pts[0].x} ${pts[0].y} ` + pts.slice(1).map((pt) => `L ${pt.x} ${pt.y}`).join(' ');
+      return `<path d="${escapeAttr(d)}" fill="none" stroke="${escapeAttr(stroke || '#1a1a1a')}" stroke-width="${sw || 2}" stroke-linecap="round" stroke-linejoin="round"/>`;
     }
     case 'triangle': {
       const pts = (shape.params as TriangleParams).points

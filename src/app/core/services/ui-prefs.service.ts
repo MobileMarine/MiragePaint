@@ -31,7 +31,6 @@ const DEFAULT_COLLAPSED: Record<string, boolean> = {
   fill: false,
   group: false,
   transform: false,
-  defaults: false,
 };
 
 @Injectable({ providedIn: 'root' })

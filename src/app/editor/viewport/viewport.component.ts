@@ -186,7 +186,9 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
     }
 
     if (this.dragMode === 'draw') {
-      this.drawing.continueStroke(world, this.startWorld);
+      this.drawing.continueStroke(world, this.startWorld, {
+        constrainEqual: ev.ctrlKey,
+      });
       return;
     }
 
@@ -256,7 +258,7 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
   onPointerUp(ev: PointerEvent): void {
     if (this.dragMode === 'draw') {
       const world = this.screenToWorld({ x: ev.clientX, y: ev.clientY });
-      this.drawing.endStroke(world, this.startWorld);
+      this.drawing.endStroke(world, this.startWorld, { constrainEqual: ev.ctrlKey });
     } else if (
       this.dragMode === 'move' ||
       this.dragMode === 'scale' ||

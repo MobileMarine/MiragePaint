@@ -12,7 +12,7 @@ Jede Inspector-Sektion (`.block`) hat eine **feste Pastellfarbe** als Hintergrun
 
 Farben folgen der **UI-Reihenfolge oben→unten** als freundliches Spektrum:
 
-**Rose → Peach → Apricot → Gold → Gelb → Cream → Mint/Aqua → Sky → Gold (Sunflower) → Rosa-Magenta → Lilac → Cream → Powder Blue**
+**Rose → Peach → Apricot → Gold → Gelb → Cream → Mint/Aqua → Sky → Gold (Sunflower) → Rosa-Magenta → Lilac → Powder Blue**
 
 Keine matten Dunkelgrün-/Dunkelblau-Töne. Bevorzuge Gelb, Orange, Rose, Hellblau, Gold, Lilac.
 
@@ -33,6 +33,7 @@ Neue Gruppen: Hue an die **Nachbar-Sektionen** anschließen (nicht zufällig spr
 | `g-fill` | Füllung | `#fde0d4` | Peach |
 | `g-group` | Gruppe / Duplizieren | `#ffe8cc` | Apricot |
 | `g-transform` | Transform | `#ffefc2` | Soft Gold |
+| `g-star` | Stern | `#fff6d0` | Pale Star Gold |
 | `g-octopus` | Octopus | `#fff3bf` | Warm Yellow |
 | `g-multistar` | MultiStar | `#fef9c8` | Butter |
 | `g-randomstar` | RandomStar | `#f5f0d0` | Cream-Gold |
@@ -41,8 +42,9 @@ Neue Gruppen: Hue an die **Nachbar-Sektionen** anschließen (nicht zufällig spr
 | `g-sunflower` | Sonnenblume | `#ffe9b5` | Sunflower Gold |
 | `g-firework` | Feuerwerk | `#fad4e8` | Rose-Magenta |
 | `g-rainbow` | Regenbogen | `#ebe0fa` | Lilac |
-| `g-defaults` | Defaults | `#f5efe6` | Warm Cream |
 | `g-layers` | Ebenen | `#e4f2fb` | Powder Blue |
+
+Typ-spezifische Blöcke anzeigen, wenn die jeweilige Form **ausgewählt** ist **oder** das zugehörige Zeichen-Tool links aktiv ist (Defaults vor dem Malen über `effectParams`). Keine separate Defaults-Gruppe.
 
 Dark mode: `:host-context(html.dark)` + `color-mix` mit warmen/hellen Tints (Pink, Peach, Gold, Sky …) und `var(--panel-soft)` — keine matten Grün-/Navy-Mixes.
 
