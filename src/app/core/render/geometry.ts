@@ -49,6 +49,51 @@ export function freehandPath(params: FreehandParams): string {
   return `M ${first.x} ${first.y} ` + rest.map((p) => `L ${p.x} ${p.y}`).join(' ');
 }
 
+/** Point on a polyline at arc-length distance `dist` (clamped to [0, total]). */
+function pointAtArc(
+  pts: Point2D[],
+  cum: number[],
+  total: number,
+  dist: number,
+): Point2D {
+  const t = Math.min(total, Math.max(0, dist));
+  let i = 1;
+  while (i < cum.length && cum[i] < t) i++;
+  const i0 = Math.max(1, i) - 1;
+  const i1 = Math.min(pts.length - 1, i0 + 1);
+  const segLen = cum[i1] - cum[i0];
+  const u = segLen < 1e-9 ? 0 : (t - cum[i0]) / segLen;
+  return {
+    x: pts[i0].x + (pts[i1].x - pts[i0].x) * u,
+    y: pts[i0].y + (pts[i1].y - pts[i0].y) * u,
+  };
+}
+
+/**
+ * Dense polyline path slice between arc lengths d0..d1 (inclusive endpoints).
+ * Keeps all intermediate vertices so gradient color bands follow the mouse path.
+ */
+function polylineSlice(
+  pts: Point2D[],
+  cum: number[],
+  total: number,
+  d0: number,
+  d1: number,
+): string {
+  const a = Math.min(d0, d1);
+  const b = Math.max(d0, d1);
+  const start = pointAtArc(pts, cum, total, a);
+  const end = pointAtArc(pts, cum, total, b);
+  const parts: string[] = [`M ${start.x} ${start.y}`];
+  for (let i = 1; i < pts.length - 1; i++) {
+    if (cum[i] > a && cum[i] < b) {
+      parts.push(`L ${pts[i].x} ${pts[i].y}`);
+    }
+  }
+  parts.push(`L ${end.x} ${end.y}`);
+  return parts.join(' ');
+}
+
 /** Colored path segments so stroke gradient follows freehand arc length. */
 export function freehandStrokeSegments(
   params: FreehandParams,
@@ -77,26 +122,12 @@ export function freehandStrokeSegments(
   const total = cum[cum.length - 1];
   if (total < 1e-6) return null;
 
-  const pointAt = (dist: number): Point2D => {
-    const t = Math.min(total, Math.max(0, dist));
-    let i = 1;
-    while (i < cum.length && cum[i] < t) i++;
-    const i0 = Math.max(1, i) - 1;
-    const i1 = Math.min(pts.length - 1, i0 + 1);
-    const segLen = cum[i1] - cum[i0];
-    const u = segLen < 1e-9 ? 0 : (t - cum[i0]) / segLen;
-    return {
-      x: pts[i0].x + (pts[i1].x - pts[i0].x) * u,
-      y: pts[i0].y + (pts[i1].y - pts[i0].y) * u,
-    };
-  };
-
   const out: { d: string; color: string }[] = [];
   for (let i = 0; i < n; i++) {
-    const a = pointAt((i / n) * total);
-    const b = pointAt(((i + 1) / n) * total);
+    const d0 = (i / n) * total;
+    const d1 = ((i + 1) / n) * total;
     const color = colorAt(i, n, stepped ? 'stepped' : 'gradient', palette[0], palette[palette.length - 1], palette, stepped, n);
-    out.push({ d: `M ${a.x} ${a.y} L ${b.x} ${b.y}`, color });
+    out.push({ d: polylineSlice(pts, cum, total, d0, d1), color });
   }
   return out;
 }
