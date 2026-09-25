@@ -12,7 +12,7 @@ import { DrawingService } from '../../core/services/drawing.service';
 import { Point2D, Shape } from '../../core/models/shape';
 import { ShapeLayerComponent } from '../shape-layer/shape-layer.component';
 import { boundsForShape, localToWorldPoint, shapePivot } from '../../core/render/geometry';
-import { getAngle } from '../../core/math/polar';
+import { getAngle, moduloAngle } from '../../core/math/polar';
 
 type DragMode = 'draw' | 'pan' | 'move' | 'scale' | 'rotate' | null;
 type ScaleHandle = 'nw' | 'ne' | 'se' | 'sw';
@@ -23,6 +23,14 @@ const OPPOSITE_HANDLE: Record<ScaleHandle, ScaleHandle> = {
   se: 'nw',
   sw: 'ne',
 };
+
+/** Shortest signed delta from `from` to `to` in degrees (−180…180]. */
+function shortestAngleDelta(from: number, to: number): number {
+  let d = to - from;
+  while (d > 180) d -= 360;
+  while (d <= -180) d += 360;
+  return d;
+}
 
 function cornerLocal(
   handle: ScaleHandle,
@@ -66,6 +74,8 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
   private scaleBounds = { x: 0, y: 0, w: 1, h: 1 };
   private scalePivot = { x: 0, y: 0 };
   private scaleAnchorWorld: Point2D = { x: 0, y: 0 };
+  /** Angle from pivot to pointer when rotate drag started (degrees). */
+  private rotateStartAngle = 0;
   private spaceDown = false;
   private panFromRightClick = false;
   private resizeObserver?: ResizeObserver;
@@ -152,7 +162,13 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
       this.dragMode = 'rotate';
       this.startWorld = world;
       const sel = this.drawing.selectedShape();
-      if (sel) this.shapeOrigin = { ...sel.transform };
+      if (sel) {
+        this.shapeOrigin = { ...sel.transform };
+        const pivot = shapePivot(sel);
+        const cx = sel.transform.x + pivot.x;
+        const cy = sel.transform.y + pivot.y;
+        this.rotateStartAngle = getAngle({ x: cx, y: cy }, world);
+      }
       return true;
     }
     if (['nw', 'ne', 'se', 'sw'].includes(handle)) {
@@ -246,10 +262,12 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
       const sel = this.drawing.selectedShape();
       if (!sel) return;
       const pivot = shapePivot(sel);
-      const cx = sel.transform.x + pivot.x;
-      const cy = sel.transform.y + pivot.y;
+      const cx = this.shapeOrigin.x + pivot.x;
+      const cy = this.shapeOrigin.y + pivot.y;
+      const current = getAngle({ x: cx, y: cy }, world);
+      const delta = shortestAngleDelta(this.rotateStartAngle, current);
       this.drawing.updateSelectedTransform(
-        { rotation: getAngle({ x: cx, y: cy }, world) },
+        { rotation: moduloAngle(this.shapeOrigin.rotation + delta) },
         false,
       );
     }
