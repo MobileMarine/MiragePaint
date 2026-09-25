@@ -60,7 +60,7 @@ const EFFECT_DEFAULTS = {
   randomStar: { arms: 200, radius: 300 },
   circleLine: { arms: 72, radius: 250 },
   circles: { mode: 2 as const, count: 20, sizeMultiply: 1.15, offset: 0.05, width: 40, height: 40 },
-  sunflower: { petals: 18, seedRings: 4 },
+  sunflower: { petals: 18, seedRings: 2 },
   firework: {
     variant: 'chrysanthemum' as FireworkVariant,
     trails: 72,
@@ -672,7 +672,7 @@ export class DrawingService {
     this.pushSnapshot();
   }
 
-  /** Keep stepped gradient band count in sync with region-linked shape params. */
+  /** Keep gradient band count in sync with region-linked shape params (does not force stepped). */
   private syncRegionBoundGradientSteps(shapeId: string): void {
     const shape = this.shapes().find((s) => s.id === shapeId);
     if (!shape) return;
@@ -681,14 +681,12 @@ export class DrawingService {
 
     const stylePatch: Partial<StyleProps> = {};
     if (shape.style.fillMode === 'gradient' && shape.style.fillGradient) {
-      this.fillStepped.set(true);
       this.fillSteps.set(n);
-      stylePatch.fillGradient = { ...shape.style.fillGradient, stepped: true, steps: n };
+      stylePatch.fillGradient = { ...shape.style.fillGradient, steps: n };
     }
     if (shape.style.strokeMode === 'gradient' && shape.style.strokeGradient) {
-      this.strokeStepped.set(true);
       this.strokeSteps.set(n);
-      stylePatch.strokeGradient = { ...shape.style.strokeGradient, stepped: true, steps: n };
+      stylePatch.strokeGradient = { ...shape.style.strokeGradient, steps: n };
     }
     if (Object.keys(stylePatch).length) {
       this.shapes.update((list) =>

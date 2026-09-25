@@ -47,7 +47,7 @@
           (reroll)="rerollStrokePalette()"
         />
         <app-gradient-steps-control
-          [stepped]="drawing.strokeStepped() || strokeStepsReadonly()"
+          [stepped]="drawing.strokeStepped()"
           [steps]="strokeStepsValue()"
           [readonly]="strokeStepsReadonly()"
           [hint]="strokeStepsHint()"
@@ -185,7 +185,7 @@
           (reroll)="rerollFillPalette()"
         />
         <app-gradient-steps-control
-          [stepped]="drawing.fillStepped() || fillStepsReadonly()"
+          [stepped]="drawing.fillStepped()"
           [steps]="fillStepsValue()"
           [readonly]="fillStepsReadonly()"
           [hint]="fillStepsHint()"

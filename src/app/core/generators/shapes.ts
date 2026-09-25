@@ -413,7 +413,7 @@ export function sunflowerLayout(
   mode: PaletteMode = 'gradient',
   extra?: PaletteExtras,
 ): {
-  petals: { angle: number; color: string }[];
+  petals: { angle: number; color: string; colorNext: string }[];
   petalCy: number;
   petalRx: number;
   petalRy: number;
@@ -426,11 +426,12 @@ export function sunflowerLayout(
   const petalRx = r * 0.14;
   const petalCy = -(diskR * 0.55 + petalRy * 0.55);
 
-  const petalList: { angle: number; color: string }[] = [];
+  const petalList: { angle: number; color: string; colorNext: string }[] = [];
   for (let i = 0; i < nPetals; i++) {
     petalList.push({
       angle: startAngle + (i * 360) / nPetals,
       color: palColor(i, nPetals, mode, startColor, endColor, extra),
+      colorNext: palColor((i + 1) % nPetals, nPetals, mode, startColor, endColor, extra),
     });
   }
 

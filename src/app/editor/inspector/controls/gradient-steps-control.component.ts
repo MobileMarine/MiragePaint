@@ -11,7 +11,6 @@ import { FormsModule } from '@angular/forms';
       <input
         type="checkbox"
         [ngModel]="stepped"
-        [disabled]="readonly"
         (ngModelChange)="steppedChange.emit(!!$event)"
       />
     </label>

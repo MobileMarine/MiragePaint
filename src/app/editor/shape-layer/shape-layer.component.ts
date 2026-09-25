@@ -231,7 +231,7 @@ export class ShapeLayerComponent {
     const pal = effectPaletteColors(this.shape.style);
     const palFrom = mode === 'solid' ? this.shape.style.stroke : pal.from;
     const palTo = mode === 'solid' ? this.shape.style.stroke : pal.to;
-    return sunflowerLayout(
+    const layout = sunflowerLayout(
       p.petals,
       p.radius,
       p.seedRings,
@@ -241,6 +241,15 @@ export class ShapeLayerComponent {
       mode,
       { stops: pal.stops, stepped: pal.stepped, steps: pal.steps },
     );
+    return {
+      ...layout,
+      /** Soft fill: tangential neighbor gradient per petal (orthogonal to center). */
+      softPetals: mode === 'gradient',
+    };
+  }
+
+  petalGradId(index: number): string {
+    return `sun-petal-${this.shape.id}-${index}`;
   }
 
   get fireworkFrame() {

@@ -197,9 +197,9 @@ export function colorAt(
   }
   if (mode === 'stepped' || stepped) {
     const bands = Math.max(2, Math.round(steps ?? palette.length));
-    // Map i onto bands, then pick color at band center across palette
+    // Map i onto bands; smooth sample so N bands across any palette yield N distinct colors
     const band = n <= 1 ? 0 : Math.min(bands - 1, Math.floor((i / n) * bands));
-    return samplePalette(band, bands, palette, false);
+    return samplePalette(band, bands, palette, true);
   }
   return samplePalette(i, n, palette, true);
 }

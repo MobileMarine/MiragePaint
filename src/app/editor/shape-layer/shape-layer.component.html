@@ -167,14 +167,38 @@
       @if (sunflower; as sun) {
         @for (petal of sun.petals; track $index) {
           <svg:g [attr.transform]="'rotate(' + petal.angle + ')'">
-            <svg:ellipse
-              cx="0"
-              [attr.cy]="sun.petalCy"
-              [attr.rx]="sun.petalRx"
-              [attr.ry]="sun.petalRy"
-              [attr.fill]="petal.color"
-              stroke="none"
-            />
+            @if (sun.softPetals) {
+              <svg:defs>
+                <svg:linearGradient
+                  [attr.id]="petalGradId($index)"
+                  gradientUnits="userSpaceOnUse"
+                  [attr.x1]="-sun.petalRx"
+                  [attr.y1]="sun.petalCy"
+                  [attr.x2]="sun.petalRx"
+                  [attr.y2]="sun.petalCy"
+                >
+                  <svg:stop offset="0%" [attr.stop-color]="petal.color" />
+                  <svg:stop offset="100%" [attr.stop-color]="petal.colorNext" />
+                </svg:linearGradient>
+              </svg:defs>
+              <svg:ellipse
+                cx="0"
+                [attr.cy]="sun.petalCy"
+                [attr.rx]="sun.petalRx"
+                [attr.ry]="sun.petalRy"
+                [attr.fill]="'url(#' + petalGradId($index) + ')'"
+                stroke="none"
+              />
+            } @else {
+              <svg:ellipse
+                cx="0"
+                [attr.cy]="sun.petalCy"
+                [attr.rx]="sun.petalRx"
+                [attr.ry]="sun.petalRy"
+                [attr.fill]="petal.color"
+                stroke="none"
+              />
+            }
           </svg:g>
         }
         @for (seed of sun.seeds; track $index) {

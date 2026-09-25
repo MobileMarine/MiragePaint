@@ -389,7 +389,6 @@ export class InspectorComponent {
   syncFillGradient(): void {
     const bound = this.fillBoundSteps();
     if (bound != null) {
-      this.drawing.fillStepped.set(true);
       this.drawing.fillSteps.set(bound);
     }
     if (this.selected()) {
@@ -400,7 +399,6 @@ export class InspectorComponent {
   syncStrokeGradient(): void {
     const bound = this.strokeBoundSteps();
     if (bound != null) {
-      this.drawing.strokeStepped.set(true);
       this.drawing.strokeSteps.set(bound);
     }
     if (this.selected()) {
