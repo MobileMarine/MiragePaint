@@ -40,6 +40,7 @@
           [showReroll]="showStrokeReroll()"
           (fromChange)="onStroke($event)"
           (toChange)="onStrokeEnd($event)"
+          (swap)="swapStrokeGradientColors()"
           (reroll)="rerollStrokePalette()"
         />
         <app-gradient-steps-control
@@ -174,6 +175,7 @@
           [showReroll]="showFillReroll()"
           (fromChange)="onFillGradFrom($event)"
           (toChange)="onFillGradTo($event)"
+          (swap)="swapFillGradientColors()"
           (reroll)="rerollFillPalette()"
         />
         <app-gradient-steps-control

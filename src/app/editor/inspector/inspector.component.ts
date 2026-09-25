@@ -478,6 +478,30 @@ export class InspectorComponent {
     this.syncFillGradient();
   }
 
+  swapFillGradientColors(): void {
+    const from = this.drawing.fillGradientFrom();
+    const to = this.drawing.fillGradientTo();
+    this.drawing.fillGradientFrom.set(to);
+    this.drawing.fillGradientTo.set(from);
+    const stops = this.drawing.fillPaletteStops();
+    if (stops?.length) {
+      this.drawing.fillPaletteStops.set([...stops].reverse());
+    }
+    this.syncFillGradient();
+  }
+
+  swapStrokeGradientColors(): void {
+    const from = this.drawing.strokeColor();
+    const to = this.drawing.strokeEndColor();
+    this.drawing.strokeColor.set(to);
+    this.drawing.strokeEndColor.set(from);
+    const stops = this.drawing.strokePaletteStops();
+    if (stops?.length) {
+      this.drawing.strokePaletteStops.set([...stops].reverse());
+    }
+    this.syncStrokeGradient();
+  }
+
   onFillStepped(v: boolean): void {
     this.drawing.fillStepped.set(v);
     this.syncFillGradient();

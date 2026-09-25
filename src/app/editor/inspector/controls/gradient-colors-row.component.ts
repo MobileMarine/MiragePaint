@@ -13,7 +13,14 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
             (input)="fromChange.emit($any($event.target).value)"
             title="Von"
           />
-          <span class="grad-arrow material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+          <button
+            type="button"
+            class="grad-swap"
+            title="Farben tauschen"
+            (click)="swap.emit()"
+          >
+            <span class="grad-arrow material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+          </button>
           <input
             type="color"
             [value]="to"
@@ -37,6 +44,27 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
   styleUrl: './control-shared.scss',
   styles: [
     `
+      .grad-swap {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--block-ink-muted, var(--ink-muted));
+        cursor: pointer;
+        border-radius: 0.3rem;
+        line-height: 1;
+      }
+      .grad-swap:hover {
+        color: var(--accent);
+        background: var(--panel-hover);
+      }
+      .grad-swap .grad-arrow {
+        font-size: 1.05rem;
+      }
       .reroll-btn {
         flex-shrink: 0;
         display: inline-flex;
@@ -67,5 +95,6 @@ export class GradientColorsRowComponent {
   @Input() showReroll = false;
   @Output() fromChange = new EventEmitter<string>();
   @Output() toChange = new EventEmitter<string>();
+  @Output() swap = new EventEmitter<void>();
   @Output() reroll = new EventEmitter<void>();
 }
