@@ -10,7 +10,10 @@
     [class.is-focus]="isFocusBlock('stroke')"
   >
     <button type="button" class="block-toggle" (click)="toggle('stroke')">
-      <h3>Kante</h3>
+      <span class="block-head">
+        <span class="material-symbols-outlined block-icon" aria-hidden="true">border_color</span>
+        <h3>Kante</h3>
+      </span>
       <span class="chevron material-symbols-outlined">{{ isCollapsed('stroke') ? 'expand_more' : 'expand_less' }}</span>
     </button>
     @if (!isCollapsed('stroke')) {
@@ -135,7 +138,10 @@
     [class.is-focus]="isFocusBlock('fill')"
   >
     <button type="button" class="block-toggle" (click)="toggle('fill')">
-      <h3>Füllung</h3>
+      <span class="block-head">
+        <span class="material-symbols-outlined block-icon" aria-hidden="true">format_color_fill</span>
+        <h3>Füllung</h3>
+      </span>
       <span class="chevron material-symbols-outlined">{{ isCollapsed('fill') ? 'expand_more' : 'expand_less' }}</span>
     </button>
     @if (!isCollapsed('fill')) {
@@ -217,7 +223,10 @@
       [class.is-focus]="isFocusBlock('group')"
     >
       <button type="button" class="block-toggle" (click)="toggle('group')">
-        <h3>Gruppe</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">group_work</span>
+          <h3>Gruppe</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('group') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('group')) {
@@ -245,7 +254,10 @@
       [class.is-focus]="isFocusBlock('transform')"
     >
       <button type="button" class="block-toggle" (click)="toggle('transform')">
-        <h3>Transform</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">transform</span>
+          <h3>Transform</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('transform') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('transform')) {
@@ -300,7 +312,10 @@
       [class.is-focus]="isFocusBlock('star')"
     >
       <button type="button" class="block-toggle" (click)="toggle('star')">
-        <h3>Stern</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">star</span>
+          <h3>Stern</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('star') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('star')) {
@@ -335,7 +350,10 @@
       [class.is-focus]="isFocusBlock('octopus')"
     >
       <button type="button" class="block-toggle" (click)="toggle('octopus')">
-        <h3>Octopussy</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">psychiatry</span>
+          <h3>Octopussy</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('octopus') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('octopus')) {
@@ -379,7 +397,10 @@
       [class.is-focus]="isFocusBlock('multiStar')"
     >
       <button type="button" class="block-toggle" (click)="toggle('multiStar')">
-        <h3>MultiStar</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">auto_awesome</span>
+          <h3>MultiStar</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('multiStar') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('multiStar')) {
@@ -436,7 +457,10 @@
       [class.is-focus]="isFocusBlock('randomStar')"
     >
       <button type="button" class="block-toggle" (click)="toggle('randomStar')">
-        <h3>RandomStar</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">shutter_speed</span>
+          <h3>RandomStar</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('randomStar') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('randomStar')) {
@@ -470,7 +494,10 @@
       [class.is-focus]="isFocusBlock('circleLine')"
     >
       <button type="button" class="block-toggle" (click)="toggle('circleLine')">
-        <h3>CircleLine</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">radar</span>
+          <h3>CircleLine</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('circleLine') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('circleLine')) {
@@ -495,7 +522,10 @@
       [class.is-focus]="isFocusBlock('circles')"
     >
       <button type="button" class="block-toggle" (click)="toggle('circles')">
-        <h3>Circles</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">bubble_chart</span>
+          <h3>Circles</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('circles') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('circles')) {
@@ -531,7 +561,10 @@
       [class.is-focus]="isFocusBlock('sunflower')"
     >
       <button type="button" class="block-toggle" (click)="toggle('sunflower')">
-        <h3>Sonnenblume</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">filter_vintage</span>
+          <h3>Sonnenblume</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('sunflower') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('sunflower')) {
@@ -566,7 +599,10 @@
       [class.is-focus]="isFocusBlock('rainbow')"
     >
       <button type="button" class="block-toggle" (click)="toggle('rainbow')">
-        <h3>Regenbogen</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">gradient</span>
+          <h3>Regenbogen</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('rainbow') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('rainbow')) {
@@ -611,7 +647,10 @@
       [class.is-focus]="isFocusBlock('firework')"
     >
       <button type="button" class="block-toggle" (click)="toggle('firework')">
-        <h3>Feuerwerk</h3>
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">celebration</span>
+          <h3>Feuerwerk</h3>
+        </span>
         <span class="chevron material-symbols-outlined">{{ isCollapsed('firework') ? 'expand_more' : 'expand_less' }}</span>
       </button>
       @if (!isCollapsed('firework')) {
@@ -707,7 +746,10 @@
     [class.is-focus]="isFocusBlock('layers')"
   >
     <button type="button" class="block-toggle" (click)="toggle('layers')">
-      <h3>Ebenen</h3>
+      <span class="block-head">
+        <span class="material-symbols-outlined block-icon" aria-hidden="true">layers</span>
+        <h3>Ebenen</h3>
+      </span>
       <span class="chevron material-symbols-outlined">{{ isCollapsed('layers') ? 'expand_more' : 'expand_less' }}</span>
     </button>
     @if (!isCollapsed('layers')) {

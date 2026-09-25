@@ -158,6 +158,10 @@ header h2 {
 
   .block-toggle h3,
   .block h3,
+  .block-icon {
+    color: var(--block-ink);
+  }
+
   .chevron,
   .hint,
   .row em {
@@ -216,27 +220,50 @@ header h2 {
   text-align: left;
 }
 
+.block:not(.collapsed) > .block-toggle {
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.15rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--block-ink, var(--ink)) 18%, transparent);
+}
+
+.block-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.block-icon {
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  color: var(--block-ink, var(--ink));
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 500,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
 .block-toggle h3 {
   margin: 0;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--ink-muted);
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--block-ink, var(--ink));
 }
 
 .chevron {
   font-size: 1.1rem;
-  color: var(--ink-muted);
+  color: var(--block-ink-muted, var(--ink-muted));
+  flex-shrink: 0;
 }
 
 .block h3 {
   margin: 0;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--ink-muted);
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--block-ink, var(--ink));
 }
 
 .row {
