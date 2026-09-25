@@ -22,8 +22,8 @@
 
 .identity {
   display: flex;
-  align-items: baseline;
-  gap: 0.65rem;
+  align-items: center;
+  gap: 0.75rem;
   min-width: 0;
 }
 
@@ -34,6 +34,50 @@
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--ink);
+}
+
+.perf-meter {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.perf-track {
+  width: 4.5rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  overflow: hidden;
+}
+
+.perf-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition:
+    width 120ms ease,
+    background-color 180ms ease;
+  background: #81c784;
+}
+
+.perf-meter[data-level='low'] .perf-fill {
+  background: #66bb6a;
+}
+
+.perf-meter[data-level='mid'] .perf-fill {
+  background: #ffca28;
+}
+
+.perf-meter[data-level='high'] .perf-fill {
+  background: #ef5350;
+}
+
+.perf-ms {
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+  min-width: 2.6rem;
 }
 
 .subtitle {

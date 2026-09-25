@@ -1,8 +1,9 @@
-import { Component, ViewChild, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DrawingService } from '../core/services/drawing.service';
 import { ExportService } from '../core/services/export.service';
+import { PerfMonitorService } from '../core/services/perf-monitor.service';
 import { VectorizePreset, VectorizeResult } from '../core/services/vectorize.service';
 import { RecognizeResult } from '../core/services/shape-recognize.service';
 import { ApplyResult } from './vectorize-dialog/vectorize-dialog.component';
@@ -26,14 +27,23 @@ import { DrawingDocument } from '../core/models/shape';
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss',
 })
-export class EditorComponent {
+export class EditorComponent implements OnInit, OnDestroy {
   readonly drawing = inject(DrawingService);
+  readonly perf = inject(PerfMonitorService);
   private readonly exporter = inject(ExportService);
 
   @ViewChild(ViewportComponent) viewport?: ViewportComponent;
   @ViewChild(VectorizeDialogComponent) vectorizeDialog?: VectorizeDialogComponent;
 
   readonly vectorPreset = signal<VectorizePreset>('balanced');
+
+  ngOnInit(): void {
+    this.perf.start();
+  }
+
+  ngOnDestroy(): void {
+    this.perf.stop();
+  }
 
   newDoc(): void {
     if (confirm('Neues Dokument erstellen? Ungespeicherte Änderungen gehen verloren.')) {

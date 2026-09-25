@@ -2,6 +2,16 @@
   <header class="topbar">
     <div class="identity">
       <h1>MiragePaint</h1>
+      <div
+        class="perf-meter"
+        [attr.data-level]="perf.level()"
+        [attr.title]="'Frame ~' + (perf.frameMs() | number: '1.0-0') + ' ms (SVG/DOM)'"
+      >
+        <div class="perf-track">
+          <div class="perf-fill" [style.width.%]="perf.fillPercent()"></div>
+        </div>
+        <span class="perf-ms">{{ perf.frameMs() | number: '1.0-0' }} ms</span>
+      </div>
     </div>
 
     <div class="actions">
