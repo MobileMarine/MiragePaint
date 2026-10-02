@@ -305,6 +305,44 @@
     </section>
   }
 
+  @if (shows('pentagon')) {
+    <section
+      class="block fade-in g-pentagon"
+      [class.collapsed]="isCollapsed('pentagon')"
+      [class.is-focus]="isFocusBlock('pentagon')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('pentagon')">
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">pentagon</span>
+          <h3>Fünfeck</h3>
+        </span>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('pentagon') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('pentagon')) {
+        <label class="row slider">
+          <span>Ecken</span>
+          <input
+            type="number"
+            class="spin"
+            min="5"
+            max="24"
+            step="1"
+            [ngModel]="pentagonParams().sides"
+            (ngModelChange)="patchToolParam('pentagon', 'sides', $event)"
+          />
+          <input
+            type="range"
+            min="5"
+            max="24"
+            step="1"
+            [ngModel]="pentagonParams().sides"
+            (ngModelChange)="patchToolParam('pentagon', 'sides', $event)"
+          />
+        </label>
+      }
+    </section>
+  }
+
   @if (shows('star')) {
     <section
       class="block fade-in g-star"

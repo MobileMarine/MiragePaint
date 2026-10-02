@@ -15,6 +15,7 @@ import {
   RandomStarParams,
   Shape,
   ShapeType,
+  RegularPolygonParams,
   StarParams,
   StylePaintMode,
   SunflowerParams,
@@ -47,6 +48,7 @@ const PARAM_TOOLS = new Set<ToolId>([
   'firework',
   'rainbow',
   'star',
+  'pentagon',
 ]);
 
 const TYPE_LABELS: Record<string, string> = {
@@ -57,7 +59,6 @@ const TYPE_LABELS: Record<string, string> = {
   triangle: 'Dreieck',
   heart: 'Herz',
   pentagon: 'Fünfeck',
-  hexagon: 'Sechseck',
   star: 'Stern',
   polygon: 'Polygon',
   centerLines: 'CenterLines',
@@ -622,7 +623,8 @@ export class InspectorComponent {
       | 'circles'
       | 'sunflower'
       | 'rainbow'
-      | 'star',
+      | 'star'
+      | 'pentagon',
     key: string,
     value: string | number,
   ): void {
@@ -634,6 +636,9 @@ export class InspectorComponent {
           : Number(value);
     if (type === 'star' && key === 'points') {
       coerced = Math.max(3, Math.min(24, Math.round(Number(coerced))));
+    }
+    if (type === 'pentagon' && key === 'sides') {
+      coerced = Math.max(5, Math.min(24, Math.round(Number(coerced))));
     }
     const s = this.selected();
     if (s?.type === type) {
@@ -678,6 +683,15 @@ export class InspectorComponent {
       return { points: (s.params as StarParams).points };
     }
     return this.drawing.effectParams().star;
+  }
+
+  pentagonParams(): Pick<RegularPolygonParams, 'sides'> {
+    const s = this.selected();
+    if (s?.type === 'pentagon') {
+      const p = s.params as RegularPolygonParams;
+      return { sides: p.sides ?? 5 };
+    }
+    return this.drawing.effectParams().pentagon;
   }
 
   circleLineParams(): Pick<CircleLineParams, 'arms'> {

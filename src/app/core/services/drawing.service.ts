@@ -70,6 +70,7 @@ const EFFECT_DEFAULTS = {
   },
   rainbow: { mode: 'gradient' as const, bandWidth: 48 },
   star: { points: 5, innerRatio: 0.45 },
+  pentagon: { sides: 5 },
 };
 
 @Injectable({ providedIn: 'root' })
@@ -1079,7 +1080,11 @@ export class DrawingService {
           transform: createTransform(),
           params: { x: start.x, y: start.y, width: 0, height: 0 } satisfies HeartParams,
         };
-      case 'pentagon':
+      case 'pentagon': {
+        const sides = Math.max(
+          5,
+          Math.min(24, Math.round(this.effectParams().pentagon.sides ?? 5)),
+        );
         return {
           id,
           type: 'pentagon',
@@ -1090,21 +1095,10 @@ export class DrawingService {
             cy: start.y,
             radius: 0,
             rotation: -90,
+            sides,
           } satisfies RegularPolygonParams,
         };
-      case 'hexagon':
-        return {
-          id,
-          type: 'hexagon',
-          style: { ...style, fill: style.fill === 'none' ? 'transparent' : style.fill },
-          transform: createTransform(),
-          params: {
-            cx: start.x,
-            cy: start.y,
-            radius: 0,
-            rotation: -90,
-          } satisfies RegularPolygonParams,
-        };
+      }
       case 'star': {
         const sp = this.effectParams().star;
         return {
@@ -1278,17 +1272,19 @@ export class DrawingService {
         const r = normalizeRect(start.x, start.y, tip.x, tip.y);
         return { ...d, params: r satisfies HeartParams };
       }
-      case 'pentagon':
-      case 'hexagon':
+      case 'pentagon': {
+        const prev = d.params as RegularPolygonParams;
         return {
           ...d,
           params: {
+            ...prev,
             cx: start.x,
             cy: start.y,
             radius: Math.max(2, dist),
             rotation: -90,
           } satisfies RegularPolygonParams,
         };
+      }
       case 'star': {
         const prev = d.params as StarParams;
         return {
@@ -1407,8 +1403,7 @@ export class DrawingService {
         const p = shape.params as EllipseParams | GradientCircleParams;
         return p.rx < 1 && p.ry < 1;
       }
-      case 'pentagon':
-      case 'hexagon': {
+      case 'pentagon': {
         const p = shape.params as RegularPolygonParams;
         return p.radius < 2;
       }

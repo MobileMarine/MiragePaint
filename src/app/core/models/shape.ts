@@ -7,7 +7,6 @@ export type ToolId =
   | 'triangle'
   | 'heart'
   | 'pentagon'
-  | 'hexagon'
   | 'star'
   | 'centerLines'
   | 'gradient'
@@ -126,6 +125,8 @@ export interface RegularPolygonParams {
   radius: number;
   /** Rotation in degrees */
   rotation: number;
+  /** Number of vertices (5–24) */
+  sides?: number;
 }
 
 /** Pointed star (filled polygon) centered at (cx, cy). */

@@ -29,7 +29,6 @@ export class ToolbarComponent {
     { id: 'triangle', icon: 'change_history', label: 'Dreieck', group: 'basic' },
     { id: 'heart', icon: 'favorite', label: 'Herz', group: 'basic' },
     { id: 'pentagon', icon: 'pentagon', label: 'Fünfeck', group: 'basic' },
-    { id: 'hexagon', icon: 'hexagon', label: 'Sechseck', group: 'basic' },
     { id: 'star', icon: 'star', label: 'Stern', group: 'basic' },
     { id: 'centerLines', icon: 'flare', label: 'CenterLines', group: 'lines' },
     { id: 'octopus', icon: 'psychiatry', label: 'Octopussy', group: 'lines' },

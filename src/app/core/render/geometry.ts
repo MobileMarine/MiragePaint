@@ -140,6 +140,15 @@ export function polygonPoints(params: PolygonParams): string {
   return params.points.map((p) => `${p.x},${p.y}`).join(' ');
 }
 
+export function regularPolySideCount(params: RegularPolygonParams): number {
+  const sides = params.sides ?? 5;
+  return Math.max(5, Math.min(24, Math.round(sides)));
+}
+
+export function regularPolyPointsForShape(params: RegularPolygonParams): string {
+  return regularPolyPointsAttr(params, regularPolySideCount(params));
+}
+
 export function regularPolyPointsAttr(params: RegularPolygonParams, sides: number): string {
   return regularPolygonPoints(params.cx, params.cy, params.radius, sides, params.rotation)
     .map((p) => `${p.x},${p.y}`)
@@ -469,8 +478,7 @@ export function boundsForShape(shape: Shape): { x: number; y: number; w: number;
       const p = shape.params as EllipseParams;
       return { x: p.cx - p.rx, y: p.cy - p.ry, w: p.rx * 2 || 1, h: p.ry * 2 || 1 };
     }
-    case 'pentagon':
-    case 'hexagon': {
+    case 'pentagon': {
       const p = shape.params as RegularPolygonParams;
       const r = p.radius || 1;
       return { x: p.cx - r, y: p.cy - r, w: r * 2, h: r * 2 };

@@ -23,7 +23,7 @@ import {
   lineColorAt,
   polygonPoints,
   rainbowBands,
-  regularPolyPointsAttr,
+  regularPolyPointsForShape,
   shapePrimitives,
   starPointsAttr,
   sunflowerLayout,
@@ -209,14 +209,9 @@ export class ShapeLayerComponent {
     return heartPathAttr(this.shape.params as HeartParams);
   }
 
-  get pentagonPts(): string {
+  get regularPolyPts(): string {
     if (this.shape.type !== 'pentagon') return '';
-    return regularPolyPointsAttr(this.shape.params as RegularPolygonParams, 5);
-  }
-
-  get hexagonPts(): string {
-    if (this.shape.type !== 'hexagon') return '';
-    return regularPolyPointsAttr(this.shape.params as RegularPolygonParams, 6);
+    return regularPolyPointsForShape(this.shape.params as RegularPolygonParams);
   }
 
   get starPts(): string {

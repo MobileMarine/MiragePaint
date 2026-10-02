@@ -40,7 +40,6 @@ export function shapeComplexityCount(shape: Shape): number {
     case 'triangle':
     case 'heart':
     case 'pentagon':
-    case 'hexagon':
     case 'star':
     case 'polygon':
     case 'vectorPath':

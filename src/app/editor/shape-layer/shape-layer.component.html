@@ -133,15 +133,7 @@
     }
     @case ('pentagon') {
       <svg:polygon
-        [attr.points]="pentagonPts"
-        [attr.stroke]="strokeAttr"
-        [attr.stroke-width]="shape.style.strokeWidth"
-        [attr.fill]="fillAttr"
-      />
-    }
-    @case ('hexagon') {
-      <svg:polygon
-        [attr.points]="hexagonPts"
+        [attr.points]="regularPolyPts"
         [attr.stroke]="strokeAttr"
         [attr.stroke-width]="shape.style.strokeWidth"
         [attr.fill]="fillAttr"
