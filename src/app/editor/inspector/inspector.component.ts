@@ -27,6 +27,7 @@ import {
 } from '../../core/style/presets';
 import { pickFillStops } from '../../core/style/firework-palettes';
 import { regionStepCount } from '../../core/style/region-steps';
+import { styleCapabilities } from '../../core/style/style-capabilities';
 import {
   complexityLevel,
   shapeComplexityCount,
@@ -151,20 +152,16 @@ export class InspectorComponent {
   }
 
   /**
-   * Neon/Random presets need a fill surface. Hide reroll for stroke-only tools.
+   * Active shape/tool for style channel visibility (Kante / Füllung).
    */
-  readonly supportsNeonRandomFill = computed(() => {
-    const s = this.selected();
-    const type = s?.type ?? this.drawing.tool();
-    const strokeOnly = new Set([
-      'line',
-      'freehand',
-      'centerLines',
-      'firework',
-      'vectorPath',
-    ]);
-    return !strokeOnly.has(type);
-  });
+  readonly styleTargetType = computed(() => this.selected()?.type ?? this.drawing.tool());
+
+  readonly supportsStroke = computed(() => styleCapabilities(this.styleTargetType()).stroke);
+
+  readonly supportsFill = computed(() => styleCapabilities(this.styleTargetType()).fill);
+
+  /** Neon/Random fill presets only when fill is meaningful for the tool. */
+  readonly supportsNeonRandomFill = computed(() => this.supportsFill());
 
   readonly showFillReroll = computed(() => {
     const id = this.drawing.fillPresetId();
@@ -172,6 +169,7 @@ export class InspectorComponent {
   });
 
   readonly showStrokeReroll = computed(() => {
+    if (!this.supportsStroke()) return false;
     const id = this.drawing.strokePresetId();
     return id === 'neon' || id === 'random';
   });

@@ -4,6 +4,7 @@
     <p class="hint">Stil und Formparameter</p>
   </header>
 
+  @if (supportsStroke()) {
   <section
     class="block g-stroke"
     [class.collapsed]="isCollapsed('stroke')"
@@ -131,7 +132,9 @@
       />
     }
   </section>
+  }
 
+  @if (supportsFill()) {
   <section
     class="block g-fill"
     [class.collapsed]="isCollapsed('fill')"
@@ -215,6 +218,7 @@
       }
     }
   </section>
+  }
 
   @if (drawing.canGroup() || drawing.canUngroup()) {
     <section

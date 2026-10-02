@@ -111,7 +111,7 @@ export class ShapeLayerComponent {
     if (this.shape.type !== 'centerLines') return [];
     const rays = (this.shape.params as CenterLinesParams).rays;
     const n = rays.length;
-    return rays.map((_, i) => lineColorAt(this.shape.style, i, n));
+    return rays.map((_, i) => lineColorAt(this.shape.style, i, n, 'centerLines'));
   }
 
   get fillAttr(): string {
@@ -222,10 +222,21 @@ export class ShapeLayerComponent {
   get sunflower() {
     if (this.shape.type !== 'sunflower') return null;
     const p = this.shape.params as SunflowerParams;
-    const mode = effectPaletteMode(this.shape.style);
-    const pal = effectPaletteColors(this.shape.style);
-    const palFrom = mode === 'solid' ? this.shape.style.stroke : pal.from;
-    const palTo = mode === 'solid' ? this.shape.style.stroke : pal.to;
+    const mode = effectPaletteMode(this.shape.style, 'sunflower');
+    const pal = effectPaletteColors(this.shape.style, 'sunflower');
+    const fillNone = this.shape.style.fillMode === 'none';
+    const palFrom =
+      mode === 'solid'
+        ? this.shape.style.fillMode === 'solid'
+          ? this.shape.style.fill || this.shape.style.stroke
+          : this.shape.style.stroke
+        : pal.from;
+    const palTo =
+      mode === 'solid'
+        ? this.shape.style.fillMode === 'solid'
+          ? this.shape.style.fill || this.shape.style.stroke
+          : this.shape.style.stroke
+        : pal.to;
     const layout = sunflowerLayout(
       p.petals,
       p.radius,
@@ -238,8 +249,13 @@ export class ShapeLayerComponent {
     );
     return {
       ...layout,
-      /** Soft fill: tangential neighbor gradient per petal (orthogonal to center). */
-      softPetals: mode === 'gradient',
+      petals: fillNone
+        ? layout.petals.map((petal) => ({ ...petal, color: 'none', colorNext: 'none' }))
+        : layout.petals,
+      seeds: fillNone
+        ? layout.seeds.map((seed) => ({ ...seed, fill: 'none' }))
+        : layout.seeds,
+      softPetals: !fillNone && mode === 'gradient' && this.shape.style.fillMode === 'gradient',
     };
   }
 

@@ -61,10 +61,17 @@ export function generateOctopus(
   endColor: string,
   paletteMode: PaletteMode = 'gradient',
   extra?: PaletteExtras,
+  /** Solid color, `'palette'` for element color, or omit for no outline. */
+  outlineStroke?: string,
 ): GenPrimitive[] {
   const out: GenPrimitive[] = [];
   const drehWinkel = 360 / Math.max(1, arms);
   const solid = paletteMode === 'solid' || startColor === endColor;
+
+  const resolveOutline = (fillColor: string): string | undefined => {
+    if (!outlineStroke) return undefined;
+    return outlineStroke === 'palette' ? fillColor : outlineStroke;
+  };
 
   if (solid) {
     out.push({
@@ -74,10 +81,21 @@ export function generateOctopus(
       rx: radiusX / 2,
       ry: radiusY / 2,
       fill: startColor,
+      stroke: resolveOutline(startColor),
     });
   } else {
     out.push(
-      ...generateGradientCircle(0, 0, radiusX, radiusY, startColor, endColor, paletteMode, extra),
+      ...generateGradientCircle(
+        0,
+        0,
+        radiusX,
+        radiusY,
+        startColor,
+        endColor,
+        paletteMode,
+        extra,
+        resolveOutline(startColor),
+      ),
     );
   }
 
@@ -96,6 +114,7 @@ export function generateOctopus(
           rx: rx / 2,
           ry: ry / 2,
           fill: startColor,
+          stroke: resolveOutline(startColor),
         });
       } else {
         out.push(
@@ -108,6 +127,7 @@ export function generateOctopus(
             endColor,
             paletteMode,
             extra,
+            resolveOutline(startColor),
           ),
         );
       }
@@ -125,6 +145,8 @@ export function generateGradientCircle(
   endColor: string,
   mode: PaletteMode = 'gradient',
   extra?: PaletteExtras,
+  /** Outline on the outermost ellipse only. */
+  outlineStroke?: string,
 ): GenEllipse[] {
   const out: GenEllipse[] = [];
   const mradius = Math.max(xr, yr);
@@ -146,6 +168,7 @@ export function generateGradientCircle(
       rx: i * xrel,
       ry: i * yrel,
       fill: palColor(k, n, mode, startColor, endColor, extra),
+      stroke: k === 0 ? outlineStroke : undefined,
     });
   }
   return out;
@@ -190,6 +213,9 @@ export function generateCircles(
   paletteMode: PaletteMode = 'gradient',
   filled = false,
   extra?: PaletteExtras,
+  stroked = false,
+  /** Solid outline color; when omitted and stroked, use per-element palette color. */
+  solidStrokeColor?: string,
 ): GenEllipse[] {
   const out: GenEllipse[] = [];
   let sizeW = w;
@@ -199,6 +225,7 @@ export function generateCircles(
   for (let i = 0; i < count; i++) {
     const newpos = rotatePos(Math.round(i * w * offset), startAngle);
     const color = palColor(i, n, paletteMode, startColor, endColor, extra);
+    const stroke = stroked ? (solidStrokeColor ?? color) : undefined;
 
     if (mode === 1) {
       const rx = sizeMultiply * w;
@@ -210,7 +237,7 @@ export function generateCircles(
         rx,
         ry,
         fill: filled ? color : 'none',
-        stroke: filled ? undefined : color,
+        stroke,
       });
     } else {
       sizeW *= sizeMultiply;
@@ -222,7 +249,7 @@ export function generateCircles(
         rx: sizeW / 2,
         ry: sizeW / 2,
         fill: filled ? color : 'none',
-        stroke: filled ? undefined : color,
+        stroke,
       });
     }
   }

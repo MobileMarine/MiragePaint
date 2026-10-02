@@ -40,6 +40,7 @@ import {
   GenPrimitive,
 } from '../generators/shapes';
 import { colorAt, PaletteMode, RAINBOW_COLORS } from '../style/presets';
+import { styleCapabilities } from '../style/style-capabilities';
 
 export { RAINBOW_COLORS, heartPath, regularPolygonPoints, starPolygonPoints, sunflowerLayout };
 
@@ -303,25 +304,30 @@ export function localToWorldPoint(
   };
 }
 
-/** Resolve palette mode for multi-primitive generators. */
-export function effectPaletteMode(style: StyleProps): PaletteMode {
-  if (style.fillMode === 'gradient') {
+/** Resolve palette mode for multi-primitive generators (respects style capabilities). */
+export function effectPaletteMode(style: StyleProps, type?: Shape['type'] | null): PaletteMode {
+  const caps = styleCapabilities(type);
+  if (caps.fill && style.fillMode === 'gradient') {
     return style.fillGradient?.stepped ? 'stepped' : 'gradient';
   }
-  if (style.strokeMode === 'gradient') {
+  if (caps.stroke && style.strokeMode === 'gradient') {
     return style.strokeGradient?.stepped ? 'stepped' : 'gradient';
   }
   return 'solid';
 }
 
-export function effectPaletteColors(style: StyleProps): {
+export function effectPaletteColors(
+  style: StyleProps,
+  type?: Shape['type'] | null,
+): {
   from: string;
   to: string;
   stops?: string[];
   stepped?: boolean;
   steps?: number;
 } {
-  if (style.fillMode === 'gradient' && style.fillGradient) {
+  const caps = styleCapabilities(type);
+  if (caps.fill && style.fillMode === 'gradient' && style.fillGradient) {
     return {
       from: style.fillGradient.from,
       to: style.fillGradient.to,
@@ -330,7 +336,7 @@ export function effectPaletteColors(style: StyleProps): {
       steps: style.fillGradient.steps,
     };
   }
-  if (style.strokeGradient) {
+  if (caps.stroke && style.strokeMode === 'gradient' && style.strokeGradient) {
     return {
       from: style.strokeGradient.from,
       to: style.strokeGradient.to,
@@ -338,6 +344,10 @@ export function effectPaletteColors(style: StyleProps): {
       stepped: style.strokeGradient.stepped,
       steps: style.strokeGradient.steps,
     };
+  }
+  if (caps.fill && style.fillMode === 'solid') {
+    const fill = style.fill && style.fill !== 'none' ? style.fill : style.stroke;
+    return { from: fill, to: fill };
   }
   return {
     from: style.stroke,
@@ -349,10 +359,14 @@ export function circlesUseFill(style: StyleProps): boolean {
   return style.fillMode === 'solid' || style.fillMode === 'gradient';
 }
 
+export function circlesUseStroke(style: StyleProps): boolean {
+  return style.strokeMode === 'solid' || style.strokeMode === 'gradient';
+}
+
 /** Stroke color for line i of n (insertion order), matching MultiStar palette rules. */
-export function lineColorAt(style: StyleProps, i: number, n: number): string {
-  const mode = effectPaletteMode(style);
-  const { from, to, stops, stepped, steps } = effectPaletteColors(style);
+export function lineColorAt(style: StyleProps, i: number, n: number, type?: Shape['type']): string {
+  const mode = effectPaletteMode(style, type ?? 'centerLines');
+  const { from, to, stops, stepped, steps } = effectPaletteColors(style, type ?? 'centerLines');
   const palFrom = mode === 'solid' ? style.stroke : from;
   const palTo = mode === 'solid' ? style.stroke : to;
   return colorAt(i, Math.max(1, n), mode, palFrom, palTo, stops, stepped, steps);
@@ -360,20 +374,37 @@ export function lineColorAt(style: StyleProps, i: number, n: number): string {
 
 export function shapePrimitives(shape: Shape): GenPrimitive[] {
   const stroke = shape.style.stroke;
-  const end = shape.style.strokeEnd ?? stroke;
-  const mode = effectPaletteMode(shape.style);
-  const pal = effectPaletteColors(shape.style);
-  const palFrom = mode === 'solid' ? stroke : pal.from;
-  const palTo = mode === 'solid' ? stroke : pal.to;
+  const mode = effectPaletteMode(shape.style, shape.type);
+  const pal = effectPaletteColors(shape.style, shape.type);
+  const caps = styleCapabilities(shape.type);
+  const palFrom =
+    mode === 'solid'
+      ? caps.fill && shape.style.fillMode === 'solid'
+        ? shape.style.fill || stroke
+        : stroke
+      : pal.from;
+  const palTo =
+    mode === 'solid'
+      ? caps.fill && shape.style.fillMode === 'solid'
+        ? shape.style.fill || stroke
+        : stroke
+      : pal.to;
   const palExtra = {
     stops: pal.stops,
     stepped: pal.stepped,
     steps: pal.steps,
   };
+  const solidOutline =
+    circlesUseStroke(shape.style) && shape.style.strokeMode === 'solid' ? stroke : undefined;
 
   switch (shape.type) {
     case 'octopus': {
       const p = shape.params as OctopusParams;
+      const outlineStroke = circlesUseStroke(shape.style)
+        ? shape.style.strokeMode === 'solid'
+          ? stroke
+          : 'palette'
+        : undefined;
       return generateOctopus(
         p.arms,
         p.circles,
@@ -385,6 +416,7 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
         palTo,
         mode,
         palExtra,
+        outlineStroke,
       );
     }
     case 'multiStar': {
@@ -413,6 +445,7 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
     case 'circles': {
       const p = shape.params as CirclesParams;
       const filled = circlesUseFill(shape.style);
+      const stroked = circlesUseStroke(shape.style);
       const cFrom = filled && mode === 'solid' ? shape.style.fill || stroke : palFrom;
       const cTo = filled && mode === 'solid' ? shape.style.fill || stroke : palTo;
       return generateCircles(
@@ -428,6 +461,8 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
         mode,
         filled,
         palExtra,
+        stroked,
+        solidOutline,
       );
     }
     case 'gradientCircle': {
@@ -444,7 +479,7 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
           width: p.width,
           height: p.height,
           fill: 'url(#grad-' + shape.id + ')',
-          gradient: { start: stroke, end },
+          gradient: { start: stroke, end: shape.style.strokeEnd ?? stroke },
         },
       ];
     }

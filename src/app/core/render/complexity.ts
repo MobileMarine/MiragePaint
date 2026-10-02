@@ -65,10 +65,20 @@ export function shapeComplexityCount(shape: Shape): number {
 
     case 'sunflower': {
       const p = shape.params as SunflowerParams;
-      const mode = effectPaletteMode(shape.style);
-      const pal = effectPaletteColors(shape.style);
-      const palFrom = mode === 'solid' ? shape.style.stroke : pal.from;
-      const palTo = mode === 'solid' ? shape.style.stroke : pal.to;
+      const mode = effectPaletteMode(shape.style, 'sunflower');
+      const pal = effectPaletteColors(shape.style, 'sunflower');
+      const palFrom =
+        mode === 'solid'
+          ? shape.style.fillMode === 'solid'
+            ? shape.style.fill || shape.style.stroke
+            : shape.style.stroke
+          : pal.from;
+      const palTo =
+        mode === 'solid'
+          ? shape.style.fillMode === 'solid'
+            ? shape.style.fill || shape.style.stroke
+            : shape.style.stroke
+          : pal.to;
       const layout = sunflowerLayout(
         p.petals,
         p.radius,

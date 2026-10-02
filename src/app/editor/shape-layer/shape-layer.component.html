@@ -179,7 +179,8 @@
                 [attr.rx]="sun.petalRx"
                 [attr.ry]="sun.petalRy"
                 [attr.fill]="'url(#' + petalGradId($index) + ')'"
-                stroke="none"
+                [attr.stroke]="strokeAttr"
+                [attr.stroke-width]="shape.style.strokeMode === 'none' ? 0 : shape.style.strokeWidth"
               />
             } @else {
               <svg:ellipse
@@ -188,7 +189,8 @@
                 [attr.rx]="sun.petalRx"
                 [attr.ry]="sun.petalRy"
                 [attr.fill]="petal.color"
-                stroke="none"
+                [attr.stroke]="strokeAttr"
+                [attr.stroke-width]="shape.style.strokeMode === 'none' ? 0 : shape.style.strokeWidth"
               />
             }
           </svg:g>
@@ -200,7 +202,8 @@
             [attr.rx]="seed.rx"
             [attr.ry]="seed.ry"
             [attr.fill]="seed.fill"
-            stroke="none"
+            [attr.stroke]="strokeAttr"
+            [attr.stroke-width]="shape.style.strokeMode === 'none' ? 0 : shape.style.strokeWidth"
           />
         }
       }
