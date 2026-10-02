@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:release": "ng build --configuration=release && node scripts/obfuscate-release.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -25,6 +26,7 @@
     "@angular/build": "^22.1.8",
     "@angular/cli": "^22.1.8",
     "@angular/compiler-cli": "^22.1.0",
+    "javascript-obfuscator": "^4.2.2",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2"
   }
