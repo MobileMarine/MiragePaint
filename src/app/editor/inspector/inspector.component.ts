@@ -17,6 +17,7 @@ import {
   ShapeType,
   RegularPolygonParams,
   StarParams,
+  SpiralParams,
   StylePaintMode,
   SunflowerParams,
   ToolId,
@@ -25,6 +26,7 @@ import {
   COLOR_PRESETS,
   gradientPreviewCss,
 } from '../../core/style/presets';
+import { PRIME_SPIRAL_ANGLE_PRESETS } from '../../core/generators/prime-spiral';
 import { pickFillStops } from '../../core/style/firework-palettes';
 import { regionStepCount } from '../../core/style/region-steps';
 import { styleCapabilities } from '../../core/style/style-capabilities';
@@ -50,6 +52,8 @@ const PARAM_TOOLS = new Set<ToolId>([
   'rainbow',
   'star',
   'pentagon',
+  'primeSpiral',
+  'fractalSpiral',
 ]);
 
 const TYPE_LABELS: Record<string, string> = {
@@ -73,6 +77,8 @@ const TYPE_LABELS: Record<string, string> = {
   sunflower: 'Sonnenblume',
   firework: 'Feuerwerk',
   rainbow: 'Regenbogen',
+  primeSpiral: 'Primspirale',
+  fractalSpiral: 'Fraktal',
   importedVector: 'Import',
   vectorPath: 'Pfad',
   group: 'Gruppe',
@@ -622,7 +628,9 @@ export class InspectorComponent {
       | 'sunflower'
       | 'rainbow'
       | 'star'
-      | 'pentagon',
+      | 'pentagon'
+      | 'primeSpiral'
+      | 'fractalSpiral',
     key: string,
     value: string | number,
   ): void {
@@ -638,6 +646,15 @@ export class InspectorComponent {
     if (type === 'pentagon' && key === 'sides') {
       coerced = Math.max(5, Math.min(24, Math.round(Number(coerced))));
     }
+    if ((type === 'primeSpiral' || type === 'fractalSpiral') && key === 'rotation') {
+      coerced = Math.max(1, Math.min(359, Number(coerced)));
+    }
+    if (type === 'primeSpiral' && key === 'limit') {
+      coerced = Math.max(100, Math.min(50000, Math.round(Number(coerced))));
+    }
+    if (type === 'fractalSpiral' && key === 'limit') {
+      coerced = Math.max(50, Math.min(5000, Math.round(Number(coerced))));
+    }
     const s = this.selected();
     if (s?.type === type) {
       this.drawing.updateSelectedParams({ [key]: coerced });
@@ -646,6 +663,21 @@ export class InspectorComponent {
       ...ep,
       [type]: { ...ep[type], [key]: coerced },
     }));
+  }
+
+  readonly spiralAnglePresets = PRIME_SPIRAL_ANGLE_PRESETS;
+
+  applySpiralAnglePreset(type: 'primeSpiral' | 'fractalSpiral', angle: number): void {
+    this.patchToolParam(type, 'rotation', angle);
+  }
+
+  spiralParams(type: 'primeSpiral' | 'fractalSpiral'): Pick<SpiralParams, 'limit' | 'rotation'> {
+    const s = this.selected();
+    if (s?.type === type) {
+      const p = s.params as SpiralParams;
+      return { limit: p.limit, rotation: p.rotation };
+    }
+    return this.drawing.effectParams()[type];
   }
 
   octParams(): Pick<OctopusParams, 'arms' | 'circles' | 'curve'> {

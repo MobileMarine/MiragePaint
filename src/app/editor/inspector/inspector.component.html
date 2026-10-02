@@ -634,6 +634,152 @@
     </section>
   }
 
+  @if (shows('primeSpiral')) {
+    <section
+      class="block fade-in g-primeSpiral"
+      [class.collapsed]="isCollapsed('primeSpiral')"
+      [class.is-focus]="isFocusBlock('primeSpiral')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('primeSpiral')">
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">blur_on</span>
+          <h3>Primspirale</h3>
+        </span>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('primeSpiral') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('primeSpiral')) {
+        <label class="row slider">
+          <span>Winkel</span>
+          <input
+            type="number"
+            class="spin"
+            min="1"
+            max="359"
+            step="0.5"
+            [ngModel]="spiralParams('primeSpiral').rotation"
+            (ngModelChange)="patchToolParam('primeSpiral', 'rotation', $event)"
+          />
+          <input
+            type="range"
+            min="1"
+            max="359"
+            step="0.5"
+            [ngModel]="spiralParams('primeSpiral').rotation"
+            (ngModelChange)="patchToolParam('primeSpiral', 'rotation', $event)"
+          />
+        </label>
+        <div class="row chip-row">
+          <span>Presets</span>
+          <div class="chips">
+            @for (a of spiralAnglePresets; track a) {
+              <button
+                type="button"
+                class="chip"
+                [class.active]="spiralParams('primeSpiral').rotation === a"
+                (click)="applySpiralAnglePreset('primeSpiral', a)"
+              >
+                {{ a }}°
+              </button>
+            }
+          </div>
+        </div>
+        <label class="row slider">
+          <span>Prim-Grenze</span>
+          <input
+            type="number"
+            class="spin"
+            min="100"
+            max="50000"
+            step="100"
+            [ngModel]="spiralParams('primeSpiral').limit"
+            (ngModelChange)="patchToolParam('primeSpiral', 'limit', $event)"
+          />
+          <input
+            type="range"
+            min="100"
+            max="50000"
+            step="100"
+            [ngModel]="spiralParams('primeSpiral').limit"
+            (ngModelChange)="patchToolParam('primeSpiral', 'limit', $event)"
+          />
+        </label>
+      }
+    </section>
+  }
+
+  @if (shows('fractalSpiral')) {
+    <section
+      class="block fade-in g-fractalSpiral"
+      [class.collapsed]="isCollapsed('fractalSpiral')"
+      [class.is-focus]="isFocusBlock('fractalSpiral')"
+    >
+      <button type="button" class="block-toggle" (click)="toggle('fractalSpiral')">
+        <span class="block-head">
+          <span class="material-symbols-outlined block-icon" aria-hidden="true">grain</span>
+          <h3>Fraktal</h3>
+        </span>
+        <span class="chevron material-symbols-outlined">{{ isCollapsed('fractalSpiral') ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+      @if (!isCollapsed('fractalSpiral')) {
+        <label class="row slider">
+          <span>Winkel</span>
+          <input
+            type="number"
+            class="spin"
+            min="1"
+            max="359"
+            step="0.5"
+            [ngModel]="spiralParams('fractalSpiral').rotation"
+            (ngModelChange)="patchToolParam('fractalSpiral', 'rotation', $event)"
+          />
+          <input
+            type="range"
+            min="1"
+            max="359"
+            step="0.5"
+            [ngModel]="spiralParams('fractalSpiral').rotation"
+            (ngModelChange)="patchToolParam('fractalSpiral', 'rotation', $event)"
+          />
+        </label>
+        <div class="row chip-row">
+          <span>Presets</span>
+          <div class="chips">
+            @for (a of spiralAnglePresets; track a) {
+              <button
+                type="button"
+                class="chip"
+                [class.active]="spiralParams('fractalSpiral').rotation === a"
+                (click)="applySpiralAnglePreset('fractalSpiral', a)"
+              >
+                {{ a }}°
+              </button>
+            }
+          </div>
+        </div>
+        <label class="row slider">
+          <span>Schritte</span>
+          <input
+            type="number"
+            class="spin"
+            min="50"
+            max="5000"
+            step="10"
+            [ngModel]="spiralParams('fractalSpiral').limit"
+            (ngModelChange)="patchToolParam('fractalSpiral', 'limit', $event)"
+          />
+          <input
+            type="range"
+            min="50"
+            max="5000"
+            step="10"
+            [ngModel]="spiralParams('fractalSpiral').limit"
+            (ngModelChange)="patchToolParam('fractalSpiral', 'limit', $event)"
+          />
+        </label>
+      }
+    </section>
+  }
+
   @if (shows('rainbow')) {
     <section
       class="block fade-in g-rainbow"

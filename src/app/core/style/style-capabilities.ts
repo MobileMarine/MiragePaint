@@ -12,6 +12,8 @@ const STROKE_ONLY = new Set<string>([
   'circleLine',
   'multiStar',
   'randomStar',
+  'primeSpiral',
+  'fractalSpiral',
 ]);
 
 const OWN_SCHEME = new Set<string>(['firework', 'rainbow']);

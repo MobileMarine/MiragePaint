@@ -84,6 +84,12 @@ header h2 {
 .block.g-sunflower {
   background: #ffe9b5; /* sunflower gold */
 }
+.block.g-primeSpiral {
+  background: #e8f5e9; /* soft sage */
+}
+.block.g-fractalSpiral {
+  background: #e0f2f1; /* teal mist */
+}
 .block.g-firework {
   background: #fad4e8; /* rose-magenta */
 }
@@ -127,6 +133,12 @@ header h2 {
 }
 :host-context(html.dark) .block.g-sunflower {
   background: color-mix(in srgb, #ffcc80 34%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-primeSpiral {
+  background: color-mix(in srgb, #a5d6a7 32%, var(--panel-soft));
+}
+:host-context(html.dark) .block.g-fractalSpiral {
+  background: color-mix(in srgb, #80cbc4 32%, var(--panel-soft));
 }
 :host-context(html.dark) .block.g-firework {
   background: color-mix(in srgb, #f48fb1 36%, var(--panel-soft));
@@ -558,6 +570,40 @@ header h2 {
   margin: 0.35rem 0 0.15rem;
   border: 0;
   border-top: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.chip-row {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.chip {
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink);
+  border-radius: 0.35rem;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: var(--panel-hover);
+}
+
+.chip.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .fade-in {

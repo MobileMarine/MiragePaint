@@ -12,6 +12,7 @@ import { DrawingService } from '../../core/services/drawing.service';
 import { Point2D, Shape } from '../../core/models/shape';
 import { ShapeLayerComponent } from '../shape-layer/shape-layer.component';
 import { boundsForShape, localToWorldPoint, shapePivot } from '../../core/render/geometry';
+import { PICK_THRESHOLD_PX, pickNearestShape } from '../../core/render/pick';
 import { getAngle, moduloAngle } from '../../core/math/polar';
 
 type DragMode = 'draw' | 'pan' | 'move' | 'scale' | 'rotate' | null;
@@ -123,11 +124,11 @@ export class ViewportComponent implements AfterViewInit, OnDestroy {
     }
 
     if (this.drawing.tool() === 'select') {
-      const shapeEl = target.closest?.('[data-shape-id]');
-      const id = shapeEl?.getAttribute('data-shape-id');
-      if (id) {
-        this.drawing.selectShape(id, { toggle: ev.ctrlKey || ev.metaKey });
-        if (!(ev.ctrlKey || ev.metaKey) || this.drawing.selectedIds().includes(id)) {
+      const maxDist = PICK_THRESHOLD_PX / Math.max(0.05, this.drawing.zoom());
+      const nearest = pickNearestShape(this.drawing.shapes(), world, maxDist);
+      if (nearest) {
+        this.drawing.selectShape(nearest.id, { toggle: ev.ctrlKey || ev.metaKey });
+        if (!(ev.ctrlKey || ev.metaKey) || this.drawing.selectedIds().includes(nearest.id)) {
           this.dragMode = 'move';
           this.startWorld = world;
           const sel = this.drawing.selectedShape();

@@ -37,6 +37,8 @@ export class ToolbarComponent {
     { id: 'circleLine', icon: 'radar', label: 'CircleLine', group: 'lines' },
     { id: 'circles', icon: 'bubble_chart', label: 'Circles', group: 'lines' },
     { id: 'sunflower', icon: 'filter_vintage', label: 'Sonnenblume', group: 'fx' },
+    { id: 'primeSpiral', icon: 'blur_on', label: 'Primspirale', group: 'fx' },
+    { id: 'fractalSpiral', icon: 'grain', label: 'Fraktal', group: 'fx' },
     { id: 'firework', icon: 'celebration', label: 'Feuerwerk', group: 'fx' },
     {
       id: 'rainbow',

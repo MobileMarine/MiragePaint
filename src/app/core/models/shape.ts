@@ -18,7 +18,9 @@ export type ToolId =
   | 'circles'
   | 'sunflower'
   | 'firework'
-  | 'rainbow';
+  | 'rainbow'
+  | 'primeSpiral'
+  | 'fractalSpiral';
 
 export interface Point2D {
   x: number;
@@ -269,6 +271,19 @@ export interface RainbowParams {
   bandWidth: number;
 }
 
+/** Prime-length spiral (Priminator) or sequential fractal spiral. */
+export interface SpiralParams {
+  /** 'primes' = Primspirale; 'sequence' = Fraktal (1..n) */
+  kind: 'primes' | 'sequence';
+  /** Max prime / sequence count (100–50000 primes, 50–5000 sequence) */
+  limit: number;
+  /** Turn angle after each segment (degrees) */
+  rotation: number;
+  /** Fitted outer radius from drag */
+  radius: number;
+  startAngle: number;
+}
+
 export interface ImportedVectorPath {
   d: string;
   fill: string;
@@ -321,6 +336,7 @@ export type ShapeParams =
   | SunflowerParams
   | FireworkParams
   | RainbowParams
+  | SpiralParams
   | ImportedVectorParams
   | VectorPathParams
   | GroupParams;

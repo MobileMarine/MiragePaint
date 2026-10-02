@@ -22,6 +22,7 @@ import {
   StyleProps,
   SunflowerParams,
   FireworkParams,
+  SpiralParams,
   TriangleParams,
   VectorPathParams,
   GroupParams,
@@ -39,6 +40,7 @@ import {
   sunflowerLayout,
   GenPrimitive,
 } from '../generators/shapes';
+import { generateSpiralLines } from '../generators/prime-spiral';
 import { colorAt, PaletteMode, RAINBOW_COLORS } from '../style/presets';
 import { styleCapabilities } from '../style/style-capabilities';
 
@@ -469,6 +471,22 @@ export function shapePrimitives(shape: Shape): GenPrimitive[] {
       const p = shape.params as GradientCircleParams;
       return generateGradientCircle(-p.rx, -p.ry, p.rx * 2, p.ry * 2, palFrom, palTo, mode, palExtra);
     }
+    case 'primeSpiral':
+    case 'fractalSpiral': {
+      const p = shape.params as SpiralParams;
+      const kind = shape.type === 'primeSpiral' ? 'primes' : 'sequence';
+      return generateSpiralLines(
+        kind,
+        p.limit,
+        p.rotation,
+        p.radius,
+        palFrom,
+        palTo,
+        mode,
+        palExtra,
+        p.startAngle,
+      );
+    }
     case 'gradient': {
       const p = shape.params as GradientParams;
       return [
@@ -581,6 +599,12 @@ export function boundsForShape(shape: Shape): { x: number; y: number; w: number;
     }
     case 'sunflower': {
       const p = shape.params as SunflowerParams;
+      const r = p.radius || 1;
+      return { x: -r, y: -r, w: r * 2, h: r * 2 };
+    }
+    case 'primeSpiral':
+    case 'fractalSpiral': {
+      const p = shape.params as SpiralParams;
       const r = p.radius || 1;
       return { x: -r, y: -r, w: r * 2, h: r * 2 };
     }

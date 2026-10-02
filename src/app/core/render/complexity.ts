@@ -61,6 +61,8 @@ export function shapeComplexityCount(shape: Shape): number {
     case 'randomStar':
     case 'circleLine':
     case 'circles':
+    case 'primeSpiral':
+    case 'fractalSpiral':
       return Math.max(0, shapePrimitives(shape).length);
 
     case 'sunflower': {

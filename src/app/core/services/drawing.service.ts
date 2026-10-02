@@ -30,6 +30,7 @@ import {
   StrokeMode,
   StyleProps,
   SunflowerParams,
+  SpiralParams,
   ToolId,
   Transform2D,
   TriangleParams,
@@ -71,6 +72,8 @@ const EFFECT_DEFAULTS = {
   rainbow: { mode: 'gradient' as const, bandWidth: 48 },
   star: { points: 5, innerRatio: 0.45 },
   pentagon: { sides: 5 },
+  primeSpiral: { limit: 10000, rotation: 72 },
+  fractalSpiral: { limit: 800, rotation: 137.5 },
 };
 
 @Injectable({ providedIn: 'root' })
@@ -1212,6 +1215,34 @@ export class DrawingService {
           } satisfies RainbowParams,
         };
       }
+      case 'primeSpiral':
+        return {
+          id,
+          type: 'primeSpiral',
+          style,
+          transform: createTransform(start.x, start.y),
+          params: {
+            kind: 'primes',
+            limit: ep.primeSpiral.limit,
+            rotation: ep.primeSpiral.rotation,
+            radius: 40,
+            startAngle: angle,
+          } satisfies SpiralParams,
+        };
+      case 'fractalSpiral':
+        return {
+          id,
+          type: 'fractalSpiral',
+          style,
+          transform: createTransform(start.x, start.y),
+          params: {
+            kind: 'sequence',
+            limit: ep.fractalSpiral.limit,
+            rotation: ep.fractalSpiral.rotation,
+            radius: 40,
+            startAngle: angle,
+          } satisfies SpiralParams,
+        };
       default:
         return {
           id,
@@ -1361,6 +1392,18 @@ export class DrawingService {
           },
         };
       }
+      case 'primeSpiral':
+      case 'fractalSpiral': {
+        const p = d.params as SpiralParams;
+        return {
+          ...d,
+          params: {
+            ...p,
+            radius: Math.max(20, dist),
+            startAngle: angle,
+          } satisfies SpiralParams,
+        };
+      }
       case 'rainbow': {
         const p = d.params as RainbowParams;
         // Band thickness scales gently with span so short drags stay readable
@@ -1413,6 +1456,11 @@ export class DrawingService {
       }
       case 'sunflower': {
         const p = shape.params as SunflowerParams;
+        return p.radius < 8;
+      }
+      case 'primeSpiral':
+      case 'fractalSpiral': {
+        const p = shape.params as SpiralParams;
         return p.radius < 8;
       }
       default:
